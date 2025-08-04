@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include "error.h"
 
 // Removes whitespace from the beginning and end of the string
 void trim_string(char* str) {
@@ -87,7 +88,7 @@ bool is_valid_label(const char* str) {
 
 // Prints an error message and exits the program
 void error_exit(const char* msg) {
-    fprintf(stderr, "Error: %s\n", msg);
+    print_error("%s", msg);
     exit(EXIT_FAILURE);
 }
 

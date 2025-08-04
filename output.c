@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include "output.h"
 #include "utils.h"  // ל-format של שורות, convert_to_base4 וכד'
+#include "error.h"
 
 bool write_object_file(const char *filename,
                        const uint16_t *memory,
@@ -9,7 +12,7 @@ bool write_object_file(const char *filename,
                        int data_count)
 {
     FILE *f = fopen(filename, "w");
-    if (!f) { perror("open .ob"); return false; }
+    if (!f) { print_error("open %s: %s", filename, strerror(errno)); return false; }
 
     // שורה ראשונה: מספר הוראות ומספר מילים בקובץ נתונים
     fprintf(f, "%d %d\n", instruction_count, data_count);
@@ -28,7 +31,7 @@ bool write_entries_file(const char *filename,
                         const SymbolTable *symtab)
 {
     FILE *f = fopen(filename, "w");
-    if (!f) { perror("open .ent"); return false; }
+    if (!f) { print_error("open %s: %s", filename, strerror(errno)); return false; }
     // לכל סימבול שסומן .entry
     for (int i = 0; i < symtab->count; i++) {
         const Symbol *s = &symtab->symbols[i];
@@ -44,7 +47,7 @@ bool write_externals_file(const char *filename,
                           const SymbolTable *symtab)
 {
     FILE *f = fopen(filename, "w");
-    if (!f) { perror("open .ext"); return false; }
+    if (!f) { print_error("open %s: %s", filename, strerror(errno)); return false; }
     // בטבלת הזיקוצים החיצוניים (נשמרה במהלך second pass)
     for (int i = 0; i < symtab->ext_count; i++) {
         const ExtRef *er = &symtab->externals[i];
