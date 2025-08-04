@@ -91,3 +91,49 @@ void error_exit(const char* msg) {
     exit(EXIT_FAILURE);
 }
 
+/* Check if operand string is a register */
+bool is_register(const char *s) {
+    if (s && (s[0]=='r' || s[0]=='R') && isdigit((unsigned char)s[1]) && s[2]=='\0') {
+        int n = s[1]-'0';
+        return n>=0 && n<=7;
+    }
+    return false;
+}
+
+/* Return register number or -1 */
+int reg_number(const char *s) {
+    if (is_register(s))
+        return s[1]-'0';
+    return -1;
+}
+
+/* Convert value to base4 string */
+void convert_to_base4(unsigned int value, char *out) {
+    char buf[32]; int i=0;
+    do {
+        buf[i++] = "0123"[value % 4];
+        value /= 4;
+    } while (value && i<31);
+    buf[i]='\0';
+    /* reverse */
+    for (int j=0; j<i; j++) out[j] = buf[i-1-j];
+    out[i]='\0';
+}
+
+/* Strip extension from filename */
+const char *strip_extension(const char *filename) {
+    static char buf[256];
+    strncpy(buf, filename, sizeof(buf));
+    buf[sizeof(buf)-1]='\0';
+    char *dot = strrchr(buf,'.');
+    if (dot) *dot='\0';
+    return buf;
+}
+
+/* Simple snprintf wrapper using static buffer */
+char *strcat_printf(const char *fmt, const char *arg) {
+    static char buf[256];
+    snprintf(buf, sizeof(buf), fmt, arg);
+    return buf;
+}
+

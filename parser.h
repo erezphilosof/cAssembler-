@@ -54,6 +54,25 @@ bool  first_pass(FILE *src,
                  SymbolTable *symtab,
                  int *IC_out,
                  int *DC_out);
+bool  second_pass(FILE *src,
+                  SymbolTable *symtab);
+
+/* operand helpers */
+int   parse_operands(const char *raw, char ops[][MAX_LINE_LEN]);
+int   split_operands(const char *src, char ops[][MAX_LINE_LEN]);
+void  clean_operand_whitespace(char *op);
+bool  check_operand_syntax(const char *op);
+
+/* directive handlers */
+void  handle_data_directive(const ParsedLine *pl, int *DC);
+void  handle_string_directive(const ParsedLine *pl, int *DC);
+void  handle_mat_directive(const ParsedLine *pl, int *DC);
+void  handle_entry_extern(SymbolTable *symtab, const ParsedLine *pl);
+
+/* symbol table and counters */
+void  add_label_to_symbol_table(SymbolTable *symtab, const ParsedLine *pl, int IC, int DC);
+void  update_IC_DC(const ParsedLine *pl, int *IC, int *DC);
+void  resolve_labels(SymbolTable *symtab, const ParsedLine *pl);
 
 #endif /* PARSER_H */
 
