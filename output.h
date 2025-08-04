@@ -1,0 +1,22 @@
+#ifndef OUTPUT_H
+#define OUTPUT_H
+
+#include <stdint.h>
+#include "symbol_table.h"
+
+/* Generates the object file (.ob) from memory image */
+bool write_object_file(const char *filename,
+                       const uint16_t *memory,
+                       int instruction_count,
+                       int data_count);
+
+/* Writes all labels שסומנו כ-entry ל-.ent */
+bool write_entries_file(const char *filename,
+                        const SymbolTable *symtab);
+
+/* כותב את כל הזיקוצים החיצוניים (extern) ל-.ext */
+bool write_externals_file(const char *filename,
+                          const SymbolTable *symtab);
+
+#endif /* OUTPUT_H */
+
