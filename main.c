@@ -1,12 +1,15 @@
 // main.c
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include "utils.h"
 #include "macro.h"
 #include "parser.h"
 #include "symbol_table.h"
 #include "instructions.h"
 #include "output.h"
+#include "error.h"
 
 static ParsedLine *all_lines = NULL;
 static int         line_count = 0;
@@ -14,7 +17,7 @@ static int         line_count = 0;
 /* Read whole file into a lines[] array */
 static bool read_input(const char *fname, char ***out_lines, int *out_n) {
     FILE *f = fopen(fname,"r");
-    if (!f) { perror("open"); return false; }
+    if (!f) { print_error("open %s: %s", fname, strerror(errno)); return false; }
     char **lines = malloc(sizeof(char*) * 2048);
     int n = 0;
     char buf[256];
@@ -59,7 +62,7 @@ static bool second_pass(SymbolTable *st, CPUState *cpu) {
 
 int main(int argc, char **argv) {
     if (argc != 2) {
-        fprintf(stderr,"Usage: %s <source.as>\n",argv[0]);
+        print_error("Usage: %s <source.as>", argv[0]);
         return 1;
     }
 
@@ -82,7 +85,7 @@ int main(int argc, char **argv) {
 
     int IC, DC;
     if (!first_pass(tmp, &st, &IC, &DC)) {
-        fprintf(stderr,"First pass failed\n");
+        print_error("First pass failed");
         return 1;
     }
 
@@ -100,7 +103,7 @@ int main(int argc, char **argv) {
 
     /* 4. Second pass: execute instructions */
     if (!second_pass(&st, &cpu)) {
-        fprintf(stderr,"Second pass failed\n");
+        print_error("Second pass failed");
         return 1;
     }
 
