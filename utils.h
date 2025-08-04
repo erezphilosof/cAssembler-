@@ -30,4 +30,18 @@ void convert_to_base4(uint16_t value, char *out);
 // Prints an error message and exits the program
 void error_exit(const char* msg);
 
+// Replace all occurrences of substring `old` in `src` with `new`.
+// Returns a newly allocated string which the caller must free.
+// Returns NULL on allocation failure.
+char *replace_substring(const char *src, const char *old, const char *new_sub);
+
+// Concatenate `base` and `suffix` into a newly allocated string.
+// Caller owns the returned string and must free it. Returns NULL on
+// allocation failure.
+char *strcat_printf(const char *base, const char *suffix);
+
+// Return a copy of `filename` without its extension. The returned pointer
+// refers to a static buffer that is overwritten on each call.
+const char *strip_extension(const char *filename);
+
 #endif // UTILS_H
