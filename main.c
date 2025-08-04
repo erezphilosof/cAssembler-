@@ -27,11 +27,16 @@ static bool read_input(const char *fname, char ***out_lines, int *out_n) {
     return true;
 }
 
-/* Second pass: execute each instruction in order (fills cpu.memory) */
+/* Second pass: handle .entry directives and execute instructions */
 static bool second_pass(SymbolTable *st, CPUState *cpu) {
     for (int i = 0; i < line_count; i++) {
         ParsedLine *pl = &all_lines[i];
-        if (pl->type != STMT_INSTRUCTION) continue;
+        if (pl->type == STMT_DIRECTIVE && pl->dir_type == DIR_ENTRY) {
+            mark_entry(st, pl->directive_args);
+            continue;
+        }
+        if (pl->type != STMT_INSTRUCTION)
+            continue;
         /* Dispatch based on opcode string */
         if      (strcasecmp(pl->opcode,"MOV")==0) exec_mov(pl,cpu);
         else if (strcasecmp(pl->opcode,"CMP")==0) exec_cmp(pl,cpu);
@@ -90,6 +95,7 @@ int main(int argc, char **argv) {
     CPUState cpu = {0};
     cpu.memory = calloc(IC+DC, sizeof(uint16_t));
     cpu.PC     = 0;
+    cpu.symtab = &st;
 
     /* Re‐parse into ParsedLine structs */
     fseek(tmp,0,SEEK_SET);

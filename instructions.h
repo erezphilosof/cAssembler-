@@ -15,6 +15,7 @@ typedef struct {
     uint16_t  regs[8];    /* R0..R7 */
     bool      zero_flag;
     bool      sign_flag;
+    SymbolTable *symtab;  /* symbol table for label resolution */
 } CPUState;
 
 /* Execute one instruction at pl->line_number */
