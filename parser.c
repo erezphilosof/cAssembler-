@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 
 #include "parser.h"
@@ -30,20 +31,6 @@ static DirectiveType directive_from_token(const char *tok) {
     if (strcasecmp(tok, "entry")  == 0) return DIR_ENTRY;
     if (strcasecmp(tok, "extern") == 0) return DIR_EXTERN;
     return DIR_INVALID;
-}
-
-/* Count comma-separated items in data directive */
-static int count_data_items(const char *args) {
-    int count = 0;
-    char buf[MAX_LINE_LEN];
-    strncpy(buf, args, sizeof(buf));
-    buf[sizeof(buf)-1] = '\0';
-    char *tok = strtok(buf, ",");
-    while (tok) {
-        ++count;
-        tok = strtok(NULL, ",");
-    }
-    return count;
 }
 
 /* Parse one line into ParsedLine */
@@ -132,79 +119,3 @@ bool parse_line(const char *src, ParsedLine *out, int line_no) {
     print_error("Unhandled line");
     return false;
 }
-
-/* First pass: build symbol table, count IC/DC */
-bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out) {
-    char line[MAX_LINE_LEN];
-    int IC=0, DC=0, ln=0;
-
-    while (fgets(line, sizeof(line), src)) {
-        ++ln;
-        ParsedLine pl;
-        if (!parse_line(line, &pl, ln))
-            continue;  /* error already logged */
-
-        /* label addition */
-        if (pl.has_label && pl.type!=STMT_LABEL_ONLY) {
-            bool is_data = (pl.type==STMT_DIRECTIVE &&
-                           (pl.dir_type==DIR_DATA ||
-                            pl.dir_type==DIR_STRING ||
-                            pl.dir_type==DIR_MAT));
-            add_label(symtab, pl.label, is_data ? DC : IC, is_data);
-        }
-
-        /* handle directives */
-        if (pl.type==STMT_DIRECTIVE) {
-            switch (pl.dir_type) {
-            case DIR_DATA: {
-                int n = count_data_items(pl.directive_args);
-                DC += n;
-                break;
-            }
-            case DIR_STRING: {
-                /* count length of quoted string + 1 for '\0' */
-                char *start = strchr(pl.directive_args, '"');
-                if (!start) {
-                    print_error("Missing opening quote");
-                    break;
-                }
-                char *end = strrchr(pl.directive_args, '"');
-                if (!end || end==start) {
-                    print_error("Missing closing quote");
-                    break;
-                }
-                DC += (int)(end - start - 1) + 1;
-                break;
-            }
-            case DIR_MAT:
-                DC += 1;  /* placeholder; user to refine */
-                break;
-            case DIR_EXTERN:
-                add_label_external(symtab, pl.directive_args);
-                break;
-            case DIR_ENTRY:
-                /* entry resolved in second pass */
-                break;
-            default:
-                print_error("Unsupported directive");
-            }
-            continue;
-        }
-
-        /* handle instructions */
-        if (pl.type==STMT_INSTRUCTION) {
-            IC += 1;  /* placeholder: one word per instruction */
-            continue;
-        }
-
-        /* label-only or empty/comment: do nothing */
-    }
-
-    /* relocate all data symbols by IC */
-    relocate_data_symbols(symtab, IC);
-
-    if (IC_out) *IC_out = IC;
-    if (DC_out) *DC_out = DC;
-    return (get_error_count() == 0);
-}
-
