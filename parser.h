@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "utils.h"          /* trim_string, is_valid_label */
 #include "symbol_table.h"   /* add_label, add_label_external, relocate_data_symbols */
@@ -54,6 +55,7 @@ bool  first_pass(FILE *src,
                  SymbolTable *symtab,
                  int *IC_out,
                  int *DC_out);
+const uint16_t *get_data_segment(void);
 
 #endif /* PARSER_H */
 

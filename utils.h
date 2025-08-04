@@ -30,4 +30,9 @@ void convert_to_base4(uint16_t value, char *out);
 // Prints an error message and exits the program
 void error_exit(const char* msg);
 
+// Utility helpers used across the assembler
+const char* strip_extension(const char* filename);
+const char* strcat_printf(const char* fmt, const char* arg);
+void replace_substring(char* str, const char* pattern, const char* repl);
+
 #endif // UTILS_H

@@ -103,3 +103,30 @@ void error_exit(const char* msg) {
     exit(EXIT_FAILURE);
 }
 
+/* Remove extension from filename (static buffer) */
+const char* strip_extension(const char* filename) {
+    static char buf[256];
+    strncpy(buf, filename, sizeof(buf));
+    buf[sizeof(buf)-1] = '\0';
+    char *dot = strrchr(buf, '.');
+    if (dot) *dot = '\0';
+    return buf;
+}
+
+/* printf-style helper returning static buffer */
+const char* strcat_printf(const char* fmt, const char* arg) {
+    static char buf[512];
+    snprintf(buf, sizeof(buf), fmt, arg);
+    return buf;
+}
+
+/* Replace first occurrence of pattern with replacement in-place */
+void replace_substring(char* str, const char* pattern, const char* repl) {
+    char *pos = strstr(str, pattern);
+    if (!pos) return;
+    char tmp[1024];
+    size_t prefix = pos - str;
+    snprintf(tmp, sizeof(tmp), "%.*s%s%s", (int)prefix, str, repl, pos + strlen(pattern));
+    strcpy(str, tmp);
+}
+

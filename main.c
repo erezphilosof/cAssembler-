@@ -1,4 +1,5 @@
 // main.c
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include "utils.h"
@@ -8,6 +9,8 @@
 #include "instructions.h"
 #include "output.h"
 #include "error.h"
+#include <string.h>
+#include <strings.h>
 
 static ParsedLine *all_lines = NULL;
 static int         line_count = 0;
@@ -105,6 +108,11 @@ int main(int argc, char **argv) {
         print_error("Second pass failed");
         return 1;
     }
+
+    /* copy data segment after instructions */
+    const uint16_t *data_seg = get_data_segment();
+    for (int i = 0; i < DC; ++i)
+        cpu.memory[IC + i] = data_seg[i];
 
     /* 5. Emit files */
     const char *base = strip_extension(argv[1]);

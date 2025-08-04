@@ -1,8 +1,13 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <strings.h>
 
 #include "parser.h"
+#include "registers.h"
 
 /* trim in-place, remove comments after ';' */
 static void normalize(char *s) {
@@ -33,17 +38,20 @@ static DirectiveType directive_from_token(const char *tok) {
 }
 
 /* Count comma-separated items in data directive */
-static int count_data_items(const char *args) {
-    int count = 0;
-    char buf[MAX_LINE_LEN];
-    strncpy(buf, args, sizeof(buf));
-    buf[sizeof(buf)-1] = '\0';
-    char *tok = strtok(buf, ",");
-    while (tok) {
-        ++count;
-        tok = strtok(NULL, ",");
-    }
-    return count;
+/* data segment collected during first pass */
+#define MAX_DATA_WORDS 4096
+static uint16_t data_segment[MAX_DATA_WORDS];
+static int data_count = 0;
+
+const uint16_t *get_data_segment(void) { return data_segment; }
+
+/* determine how many extra words an operand requires */
+static int words_for_operand(const char *op) {
+    if (!op || *op=='\0') return 0;
+    if (is_register(op)) return 0;          /* register encoded in main word */
+    if (op[0]=='#') return 1;               /* immediate */
+    if (strchr(op,'[')) return 2;           /* matrix addressing */
+    return 1;                               /* direct label */
 }
 
 /* Parse one line into ParsedLine */
@@ -137,6 +145,7 @@ bool parse_line(const char *src, ParsedLine *out, int line_no) {
 bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out) {
     char line[MAX_LINE_LEN];
     int IC=0, DC=0, ln=0;
+    data_count = 0;
 
     while (fgets(line, sizeof(line), src)) {
         ++ln;
@@ -157,28 +166,62 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out) {
         if (pl.type==STMT_DIRECTIVE) {
             switch (pl.dir_type) {
             case DIR_DATA: {
-                int n = count_data_items(pl.directive_args);
-                DC += n;
+                char buf[MAX_LINE_LEN];
+                strncpy(buf, pl.directive_args, sizeof(buf));
+                buf[sizeof(buf)-1]='\0';
+                char *tok = strtok(buf, ",");
+                while(tok){
+                    data_segment[data_count++] = (uint16_t)atoi(tok);
+                    ++DC;
+                    tok = strtok(NULL, ",");
+                }
                 break;
             }
             case DIR_STRING: {
-                /* count length of quoted string + 1 for '\0' */
+                /* copy chars including terminating 0 */
                 char *start = strchr(pl.directive_args, '"');
-                if (!start) {
-                    print_error("Missing opening quote");
+                char *end   = strrchr(pl.directive_args, '"');
+                if (!start || !end || end==start) {
+                    print_error("Malformed string directive");
                     break;
                 }
-                char *end = strrchr(pl.directive_args, '"');
-                if (!end || end==start) {
-                    print_error("Missing closing quote");
-                    break;
+                for (char *s=start+1; s<end; ++s) {
+                    data_segment[data_count++] = (uint16_t)(unsigned char)*s;
+                    ++DC;
                 }
-                DC += (int)(end - start - 1) + 1;
+                data_segment[data_count++] = 0; /* null terminator */
+                ++DC;
                 break;
             }
-            case DIR_MAT:
-                DC += 1;  /* placeholder; user to refine */
+            case DIR_MAT: {
+                int rows, cols;
+                if (sscanf(pl.directive_args, " [%d] [%d]", &rows, &cols) != 2) {
+                    print_error("Invalid .mat syntax");
+                    break;
+                }
+                char *after = strchr(pl.directive_args, ']');
+                if (!after) { print_error("Invalid .mat syntax"); break; }
+                after = strchr(after+1, ']');
+                if (!after) { print_error("Invalid .mat syntax"); break; }
+                after++;
+                trim_string(after);
+                char buf[MAX_LINE_LEN];
+                strncpy(buf, after, sizeof(buf));
+                buf[sizeof(buf)-1]='\0';
+                int expected = rows * cols;
+                char *tok = strtok(buf, ",");
+                int count = 0;
+                while(tok && count < expected){
+                    data_segment[data_count++] = (uint16_t)atoi(tok);
+                    ++count; ++DC;
+                    tok = strtok(NULL, ",");
+                }
+                while(count < expected){
+                    data_segment[data_count++] = 0;
+                    ++count; ++DC;
+                }
                 break;
+            }
             case DIR_EXTERN:
                 add_label_external(symtab, pl.directive_args);
                 break;
@@ -193,7 +236,12 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out) {
 
         /* handle instructions */
         if (pl.type==STMT_INSTRUCTION) {
-            IC += 1;  /* placeholder: one word per instruction */
+            char ops[2][80];
+            int n = split_string(pl.operands_raw, ',', ops, 2);
+            int words = 1; /* opcode word */
+            if (n>0) words += words_for_operand(ops[0]);
+            if (n>1) words += words_for_operand(ops[1]);
+            IC += words;
             continue;
         }
 
