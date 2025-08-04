@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "parser.h"       /* ParsedLine */
 #include "symbol_table.h" /* lookup_symbol */
-#include "utils.h"        /* is_register, reg_number */
+#include "registers.h"    /* is_register, reg_number */
 #include "error.h"        /* print_error */
 
 /* CPU state (registers, flags, memory pointer, program counter) */
