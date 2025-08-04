@@ -10,6 +10,7 @@
 #include "output.h"
 #include "error.h"
 #include "second_pass.h"
+#include "data_segment.h"
 
 
 /* Read whole file into a lines[] array */
@@ -46,13 +47,14 @@ int main(int argc, char **argv) {
     /* 2. First pass */
     SymbolTable st; init_symbol_table(&st);
     ParsedLine *plarr = malloc(sizeof(*plarr)*flat_n);
+    DataSegment data_seg; init_data_segment(&data_seg);
 
     FILE *tmp = tmpfile();
     for(int i=0;i<flat_n;i++) fputs(flat[i],tmp);
     fseek(tmp,0,SEEK_SET);
 
     int IC, DC;
-    if (!first_pass(tmp, &st, &IC, &DC)) {
+    if (!first_pass(tmp, &st, &IC, &DC, &data_seg)) {
         print_error("First pass failed");
         return 1;
     }
@@ -80,6 +82,13 @@ int main(int argc, char **argv) {
     const char *base = strip_extension(argv[1]);
     char *fname;
 
+    /* copy data segment after instructions */
+    if (data_seg.count != DC) {
+        print_error("Data count mismatch");
+    } else {
+        memcpy(cpu.memory + IC, data_seg.words, DC * sizeof(uint16_t));
+    }
+
     fname = strcat_printf(base, ".ob");
     write_object_file(fname, cpu.memory, IC, DC);
     free(fname);
@@ -94,6 +103,7 @@ int main(int argc, char **argv) {
 
     /* Cleanup */
     free(cpu.memory);
+    free_data_segment(&data_seg);
     free_symbol_table(&st);
     for(int i=0;i<flat_n;i++) free(flat[i]);
     free(flat);

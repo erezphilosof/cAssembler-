@@ -7,12 +7,7 @@
 #include "utils.h"
 #include "registers.h"
 #include "error.h"
-
-/* Count comma-separated items using utils split_string */
-static int count_data_items(const char *args) {
-    char tokens[64][80];
-    return split_string(args, ',', tokens, 64);
-}
+#include "data_segment.h"
 
 /* Estimate number of machine words for an instruction */
 static int count_instruction_words(const ParsedLine *pl) {
@@ -40,7 +35,7 @@ static int count_instruction_words(const ParsedLine *pl) {
 }
 
 /* First pass: build symbol table, count IC/DC */
-bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out) {
+bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSegment *data_seg) {
     char line[MAX_LINE_LEN];
     int IC = 0, DC = 0, ln = 0;
 
@@ -63,7 +58,11 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out) {
         if (pl.type == STMT_DIRECTIVE) {
             switch (pl.dir_type) {
             case DIR_DATA: {
-                int n = count_data_items(pl.directive_args);
+                char tokens[64][80];
+                int n = split_string(pl.directive_args, ',', tokens, 64);
+                for (int i = 0; i < n; i++) {
+                    append_data_word(data_seg, (uint16_t)atoi(tokens[i]));
+                }
                 DC += n;
                 break;
             }
@@ -78,19 +77,29 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out) {
                     print_error("Missing closing quote");
                     break;
                 }
+                for (char *p = start + 1; p < end; ++p) {
+                    append_data_word(data_seg, (uint16_t)(unsigned char)(*p));
+                }
+                append_data_word(data_seg, 0); /* null terminator */
                 DC += (int)(end - start - 1) + 1;
                 break;
             }
             case DIR_MAT: {
-                char toks[3][80];
-                int n = split_string(pl.directive_args, ',', toks, 3);
+                char tokens[256][80];
+                int n = split_string(pl.directive_args, ',', tokens, 256);
                 if (n < 2) {
                     print_error("Invalid .mat directive");
                     break;
                 }
-                int rows = atoi(toks[0]);
-                int cols = atoi(toks[1]);
-                DC += rows * cols;
+                int rows = atoi(tokens[0]);
+                int cols = atoi(tokens[1]);
+                int expected = rows * cols;
+                for (int i = 0; i < expected; i++) {
+                    uint16_t val = 0;
+                    if (i + 2 < n) val = (uint16_t)atoi(tokens[i + 2]);
+                    append_data_word(data_seg, val);
+                }
+                DC += expected;
                 break;
             }
             case DIR_EXTERN:
