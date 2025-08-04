@@ -25,15 +25,16 @@ bool write_object_file(const char *filename,
 }
 
 bool write_entries_file(const char *filename,
-                        const SymbolTable *symtab)
+                        const Symbol *symtab)
 {
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ent"); return false; }
-    // לכל סימבול שסומן .entry
-    for (int i = 0; i < symtab->count; i++) {
-        const Symbol *s = &symtab->symbols[i];
-        if (s->is_entry) {
-            fprintf(f, "%s %04d\n", s->name, s->address);
+    // לכל סימבול שסומן .entry בטבלה המקושרת
+    for (const Symbol *s = symtab; s; s = s->next) {
+        if (s->type == SYM_ENTRY) {
+            char buf[32];
+            convert_to_base4(s->address, buf);
+            fprintf(f, "%s %s\n", s->name, buf);
         }
     }
     fclose(f);
@@ -41,14 +42,17 @@ bool write_entries_file(const char *filename,
 }
 
 bool write_externals_file(const char *filename,
-                          const SymbolTable *symtab)
+                          const Symbol *symtab)
 {
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ext"); return false; }
-    // בטבלת הזיקוצים החיצוניים (נשמרה במהלך second pass)
-    for (int i = 0; i < symtab->ext_count; i++) {
-        const ExtRef *er = &symtab->externals[i];
-        fprintf(f, "%s %04d\n", er->name, er->address);
+    // בדיקה על כל הסימבולים והדפסת אלו המסומנים כ-external
+    for (const Symbol *s = symtab; s; s = s->next) {
+        if (s->type == SYM_EXTERNAL) {
+            char buf[32];
+            convert_to_base4(s->address, buf);
+            fprintf(f, "%s %s\n", s->name, buf);
+        }
     }
     fclose(f);
     return true;

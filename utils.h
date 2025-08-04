@@ -3,6 +3,7 @@
 #define UTILS_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 // Removes whitespace from the beginning and end of the string (in place)
 void trim_string(char* str);
@@ -22,6 +23,9 @@ void to_upper_case(char* str);
 
 // Returns true if the given string is a valid label name (starts with a letter, contains only alphanumeric or _)
 bool is_valid_label(const char* str);
+
+// Converts a 16-bit word to base-4 string (8 digits, null-terminated)
+void convert_to_base4(uint16_t value, char *out);
 
 // Prints an error message and exits the program
 void error_exit(const char* msg);

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 
 // Removes whitespace from the beginning and end of the string
 void trim_string(char* str) {
@@ -83,6 +84,17 @@ bool is_valid_label(const char* str) {
         i++;
     }
     return true;
+}
+
+// Converts a 16-bit word to a base-4 string representation
+void convert_to_base4(uint16_t value, char *out) {
+    char tmp[9];
+    for (int i = 7; i >= 0; --i) {
+        tmp[i] = "0123"[value & 0x3];
+        value >>= 2;
+    }
+    tmp[8] = '\0';
+    strcpy(out, tmp);
 }
 
 // Prints an error message and exits the program
