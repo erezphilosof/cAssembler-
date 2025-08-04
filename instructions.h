@@ -10,36 +10,18 @@
 
 /* CPU state (registers, flags, memory pointer, program counter) */
 typedef struct {
-    uint16_t *memory;     /* pointer to assembled memory image */
+    uint16_t *memory;     /* pointer to assembled instruction words */
     uint16_t  PC;         /* program counter */
-    uint16_t  regs[8];    /* R0..R7 */
+    uint16_t  regs[8];    /* R0..R7 (unused for encoding but kept for compatibility) */
     bool      zero_flag;
     bool      sign_flag;
     SymbolTable *symtab;  /* symbol table for label resolution */
 } CPUState;
 
-/* Execute one instruction at pl->line_number */
-void exec_mov(const ParsedLine *pl, CPUState *cpu);
-void exec_cmp(const ParsedLine *pl, CPUState *cpu);
-void exec_add(const ParsedLine *pl, CPUState *cpu);
-void exec_sub(const ParsedLine *pl, CPUState *cpu);
-void exec_lea(const ParsedLine *pl, CPUState *cpu);
-void exec_clr(const ParsedLine *pl, CPUState *cpu);
-void exec_not(const ParsedLine *pl, CPUState *cpu);
-void exec_inc(const ParsedLine *pl, CPUState *cpu);
-void exec_dec(const ParsedLine *pl, CPUState *cpu);
-void exec_jmp(const ParsedLine *pl, CPUState *cpu);
-void exec_bne(const ParsedLine *pl, CPUState *cpu);
-void exec_jsr(const ParsedLine *pl, CPUState *cpu);
-void exec_red(const ParsedLine *pl, CPUState *cpu);
-void exec_prn(const ParsedLine *pl, CPUState *cpu);
-void exec_stop(const ParsedLine *pl, CPUState *cpu);
-
-/* Helper routines */
-int   resolve_operand(const char *operand, CPUState *cpu);
-void  set_operand(const char *operand, CPUState *cpu, uint16_t value);
-uint16_t get_operand(const char *operand, CPUState *cpu);
-void  update_flags(CPUState *cpu, uint16_t result);
+/* Encode an instruction into machine words.
+ * out_words must have capacity for at least 3 words.
+ * Returns the number of words encoded (>=1). */
+int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3]);
 
 #endif /* INSTRUCTIONS_H */
 
