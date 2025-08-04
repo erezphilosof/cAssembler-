@@ -21,11 +21,16 @@ typedef struct Symbol {
     struct Symbol* next;
 } Symbol;
 
+typedef Symbol SymbolTable; /* alias for clarity */
+
 // Adds a new symbol to the table. Returns pointer to new symbol (or NULL if duplicate).
 Symbol* add_symbol(Symbol** table, const char* name, int address, SymbolType type);
 
 // Finds a symbol by name. Returns pointer if found, else NULL.
 Symbol* find_symbol(Symbol* table, const char* name);
+
+/* Convenience wrapper to find a symbol by name */
+Symbol* lookup_symbol(SymbolTable* table, const char* name);
 
 // Updates the type of a symbol (e.g., for marking as entry or external).
 bool update_symbol_type(Symbol* table, const char* name, SymbolType new_type);
