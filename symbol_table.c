@@ -31,6 +31,11 @@ Symbol* find_symbol(Symbol* table, const char* name) {
     return NULL;
 }
 
+/* Convenience wrapper for external users */
+Symbol* lookup_symbol(SymbolTable* table, const char* name) {
+    return find_symbol(table, name);
+}
+
 // Updates the type of a symbol (e.g., for marking as entry or external).
 bool update_symbol_type(Symbol* table, const char* name, SymbolType new_type) {
     Symbol* sym = find_symbol(table, name);

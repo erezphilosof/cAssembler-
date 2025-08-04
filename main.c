@@ -28,7 +28,7 @@ static bool read_input(const char *fname, char ***out_lines, int *out_n) {
 }
 
 /* Second pass: execute each instruction in order (fills cpu.memory) */
-static bool second_pass(SymbolTable *st, CPUState *cpu) {
+static bool second_pass(CPUState *cpu) {
     for (int i = 0; i < line_count; i++) {
         ParsedLine *pl = &all_lines[i];
         if (pl->type != STMT_INSTRUCTION) continue;
@@ -90,6 +90,7 @@ int main(int argc, char **argv) {
     CPUState cpu = {0};
     cpu.memory = calloc(IC+DC, sizeof(uint16_t));
     cpu.PC     = 0;
+    cpu.symtab = &st;
 
     /* Re‐parse into ParsedLine structs */
     fseek(tmp,0,SEEK_SET);
@@ -99,7 +100,7 @@ int main(int argc, char **argv) {
     fclose(tmp);
 
     /* 4. Second pass: execute instructions */
-    if (!second_pass(&st, &cpu)) {
+    if (!second_pass(&cpu)) {
         fprintf(stderr,"Second pass failed\n");
         return 1;
     }
