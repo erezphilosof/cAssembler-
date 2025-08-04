@@ -15,9 +15,9 @@ bool write_object_file(const char *filename,
 bool write_entries_file(const char *filename,
                         const Symbol *symtab);
 
-/* כותב את כל הזיקוצים החיצוניים (extern) ל-.ext */
+/* כותב את כל השימושים בסימבולים חיצוניים ל-.ext */
 bool write_externals_file(const char *filename,
-                          const Symbol *symtab);
+                          const ExternalUse *uses);
 
 #endif /* OUTPUT_H */
 

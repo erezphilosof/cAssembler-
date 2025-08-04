@@ -67,3 +67,23 @@ void free_symbol_table(Symbol* table) {
     }
 }
 
+ExternalUse* add_external_use(ExternalUse **list, const char *name, int address) {
+    if (!list || !name) return NULL;
+    ExternalUse *node = malloc(sizeof(ExternalUse));
+    if (!node) return NULL;
+    strncpy(node->name, name, 31);
+    node->name[31] = '\0';
+    node->address = address;
+    node->next = *list;
+    *list = node;
+    return node;
+}
+
+void free_external_uses(ExternalUse *list) {
+    while (list) {
+        ExternalUse *next = list->next;
+        free(list);
+        list = next;
+    }
+}
+

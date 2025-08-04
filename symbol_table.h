@@ -21,6 +21,13 @@ typedef struct Symbol {
     struct Symbol* next;
 } Symbol;
 
+/* Linked-list node recording a single use of an external symbol */
+typedef struct ExternalUse {
+    char name[32];   /* symbol name */
+    int address;     /* address of the use */
+    struct ExternalUse *next;
+} ExternalUse;
+
 /*
  * The symbol table is represented as a simple singly linked list.
  * We use a dummy head node (of type SymbolTable) whose 'next' pointer
@@ -59,6 +66,12 @@ void print_symbol_table(Symbol* table);
 
 // Frees all memory of the table
 void free_symbol_table(Symbol* table);
+
+/* Records a use of an external symbol at 'address' */
+ExternalUse* add_external_use(ExternalUse **list, const char *name, int address);
+
+/* Frees the list of external symbol uses */
+void free_external_uses(ExternalUse *list);
 
 #endif // SYMBOL_TABLE_H
 

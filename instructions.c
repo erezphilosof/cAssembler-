@@ -31,7 +31,9 @@ static int parse_operand(const char *op,
                          CPUState *cpu,
                          int *mode_out,
                          int *reg_out,
-                         uint16_t *extra_out) {
+                         uint16_t *extra_out,
+                         Symbol **sym_out) {
+    if (sym_out) *sym_out = NULL;
     if (!op || op[0] == '\0') {
         *mode_out = 0; *reg_out = 0; *extra_out = 0; return 0;
     }
@@ -51,6 +53,7 @@ static int parse_operand(const char *op,
     *mode_out = AM_DIRECT;
     *reg_out = 0;
     Symbol *sym = lookup_symbol(cpu->symtab, op);
+    if (sym_out) *sym_out = sym;
     if (!sym) {
         print_error("Unknown label: %s", op);
         *extra_out = 0;
@@ -88,18 +91,26 @@ int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3
     }
 
     if (has_src) {
-        int mode, reg; uint16_t extra;
-        int needs = parse_operand(src, cpu, &mode, &reg, &extra);
+        int mode, reg; uint16_t extra; Symbol *sym = NULL;
+        int needs = parse_operand(src, cpu, &mode, &reg, &extra, &sym);
         word0 |= (uint16_t)(mode & 0x7) << 9;
         word0 |= (uint16_t)(reg  & 0x7) << 6;
-        if (needs) out_words[count++] = extra;
+        if (needs) {
+            if (sym && sym->type == SYM_EXTERNAL)
+                add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+            out_words[count++] = extra;
+        }
     }
     if (has_dst) {
-        int mode, reg; uint16_t extra;
-        int needs = parse_operand(dst, cpu, &mode, &reg, &extra);
+        int mode, reg; uint16_t extra; Symbol *sym = NULL;
+        int needs = parse_operand(dst, cpu, &mode, &reg, &extra, &sym);
         word0 |= (uint16_t)(mode & 0x7) << 3;
         word0 |= (uint16_t)(reg  & 0x7);
-        if (needs) out_words[count++] = extra;
+        if (needs) {
+            if (sym && sym->type == SYM_EXTERNAL)
+                add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+            out_words[count++] = extra;
+        }
     }
 
     out_words[0] = word0;

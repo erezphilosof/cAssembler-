@@ -95,12 +95,13 @@ int main(int argc, char **argv) {
     free(fname);
 
     fname = strcat_printf(base, ".ext");
-    write_externals_file(fname, &st);
+    write_externals_file(fname, cpu.ext_uses);
     free(fname);
 
     /* Cleanup */
     free(cpu.memory);
     free_data_segment(&data_seg);
+    free_external_uses(cpu.ext_uses);
     free_symbol_table(&st);
     for(int i=0;i<flat_n;i++) free(flat[i]);
     free(flat);
