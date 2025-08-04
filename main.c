@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 
     /* 3. Allocate CPU & memory */
     CPUState cpu = {0};
-    cpu.memory = calloc(IC+DC, sizeof(uint16_t));
+    cpu.memory = calloc(IC, sizeof(uint16_t));
     cpu.PC     = 0;
     cpu.symtab = &st;
 
@@ -82,15 +82,12 @@ int main(int argc, char **argv) {
     const char *base = strip_extension(argv[1]);
     char *fname;
 
-    /* copy data segment after instructions */
     if (data_seg.count != DC) {
         print_error("Data count mismatch");
-    } else {
-        memcpy(cpu.memory + IC, data_seg.words, DC * sizeof(uint16_t));
     }
 
     fname = strcat_printf(base, ".ob");
-    write_object_file(fname, cpu.memory, IC, DC);
+    write_object_file(fname, cpu.memory, IC, data_seg.words, DC);
     free(fname);
 
     fname = strcat_printf(base, ".ent");

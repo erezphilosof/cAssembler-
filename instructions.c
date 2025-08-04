@@ -1,188 +1,108 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+
 #include "instructions.h"
 
-/* Resolve operand string to a numeric value */
-int resolve_operand(const char *operand, CPUState *cpu) {
-    if (operand[0] == '#') {
-        /* immediate */
-        return atoi(operand + 1);
+/* Opcodes enumeration for encoding */
+static int opcode_to_num(const char *opc) {
+    if      (strcasecmp(opc, "MOV") == 0) return 0;
+    else if (strcasecmp(opc, "CMP") == 0) return 1;
+    else if (strcasecmp(opc, "ADD") == 0) return 2;
+    else if (strcasecmp(opc, "SUB") == 0) return 3;
+    else if (strcasecmp(opc, "LEA") == 0) return 4;
+    else if (strcasecmp(opc, "CLR") == 0) return 5;
+    else if (strcasecmp(opc, "NOT") == 0) return 6;
+    else if (strcasecmp(opc, "INC") == 0) return 7;
+    else if (strcasecmp(opc, "DEC") == 0) return 8;
+    else if (strcasecmp(opc, "JMP") == 0) return 9;
+    else if (strcasecmp(opc, "BNE") == 0) return 10;
+    else if (strcasecmp(opc, "JSR") == 0) return 11;
+    else if (strcasecmp(opc, "RED") == 0) return 12;
+    else if (strcasecmp(opc, "PRN") == 0) return 13;
+    else if (strcasecmp(opc, "STOP") == 0) return 14;
+    return -1;
+}
+
+enum { AM_IMMEDIATE = 0, AM_DIRECT = 1, AM_REGISTER = 2 };
+
+/* Parse one operand and return addressing mode bits and optional extra word */
+static int parse_operand(const char *op,
+                         CPUState *cpu,
+                         int *mode_out,
+                         int *reg_out,
+                         uint16_t *extra_out) {
+    if (!op || op[0] == '\0') {
+        *mode_out = 0; *reg_out = 0; *extra_out = 0; return 0;
     }
-    if (is_register(operand)) {
-        /* register */
-        int r = reg_number(operand);
-        if (r < 0 || r > 7) {
-            print_error("Invalid register");
-            return 0;
-        }
-        return cpu->regs[r];
+    if (op[0] == '#') {
+        *mode_out = AM_IMMEDIATE;
+        *reg_out = 0;
+        *extra_out = (uint16_t)atoi(op + 1);
+        return 1; /* needs extra word */
     }
-    /* label / memory direct */
-    Symbol *sym = lookup_symbol(cpu->symtab, operand);
-    if (!sym) {
-        print_error("Unknown label");
+    if (is_register(op)) {
+        *mode_out = AM_REGISTER;
+        *reg_out = reg_number(op);
+        *extra_out = 0;
         return 0;
     }
-    return cpu->memory[sym->address];
-}
-
-/* Write a value back to operand location */
-void set_operand(const char *operand, CPUState *cpu, uint16_t value) {
-    if (operand[0] == '#') {
-        print_error("Cannot STORE to immediate");
-        return;
-    }
-    if (is_register(operand)) {
-        int r = reg_number(operand);
-        cpu->regs[r] = value;
-        return;
-    }
-    /* direct memory */
-    Symbol *sym = lookup_symbol(cpu->symtab, operand);
+    /* direct label */
+    *mode_out = AM_DIRECT;
+    *reg_out = 0;
+    Symbol *sym = lookup_symbol(cpu->symtab, op);
     if (!sym) {
-        print_error("Unknown label for STORE");
-        return;
+        print_error("Unknown label: %s", op);
+        *extra_out = 0;
+    } else {
+        *extra_out = sym->address;
     }
-    cpu->memory[sym->address] = value;
+    return 1;
 }
 
-/* Get operand value */
-uint16_t get_operand(const char *operand, CPUState *cpu) {
-    return (uint16_t)resolve_operand(operand, cpu);
-}
+/* Encode an instruction into up to 3 words */
+int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3]) {
+    uint16_t word0 = 0;
+    int count = 1;
 
-/* Set zero/sign flags */
-void update_flags(CPUState *cpu, uint16_t result) {
-    cpu->zero_flag = (result == 0);
-    cpu->sign_flag = ((result & 0x8000) != 0);
-}
-
-/* MOV src,dst */
-void exec_mov(const ParsedLine *pl, CPUState *cpu) {
-    char src[64], dst[64];
-    sscanf(pl->operands_raw, "%63[^,],%63s", src, dst);
-    uint16_t v = get_operand(src, cpu);
-    set_operand(dst, cpu, v);
-}
-
-/* CMP op1,op2 */
-void exec_cmp(const ParsedLine *pl, CPUState *cpu) {
-    char a[64], b[64];
-    sscanf(pl->operands_raw, "%63[^,],%63s", a, b);
-    uint16_t r = get_operand(a, cpu) - get_operand(b, cpu);
-    update_flags(cpu, r);
-}
-
-/* ADD op1,op2 */
-void exec_add(const ParsedLine *pl, CPUState *cpu) {
-    char a[64], b[64];
-    sscanf(pl->operands_raw, "%63[^,],%63s", a, b);
-    uint16_t r = get_operand(a, cpu) + get_operand(b, cpu);
-    update_flags(cpu, r);
-    set_operand(b, cpu, r);
-}
-
-/* SUB op1,op2 */
-void exec_sub(const ParsedLine *pl, CPUState *cpu) {
-    char a[64], b[64];
-    sscanf(pl->operands_raw, "%63[^,],%63s", a, b);
-    uint16_t r = get_operand(a, cpu) - get_operand(b, cpu);
-    update_flags(cpu, r);
-    set_operand(b, cpu, r);
-}
-
-/* LEA src,dst */
-void exec_lea(const ParsedLine *pl, CPUState *cpu) {
-    char src[64], dst[64];
-    sscanf(pl->operands_raw, "%63[^,],%63s", src, dst);
-    /* src must be label */
-    Symbol *sym = lookup_symbol(cpu->symtab, src);
-    if (!sym) { print_error("Unknown label for LEA"); return; }
-    set_operand(dst, cpu, sym->address);
-}
-
-/* CLR op */
-void exec_clr(const ParsedLine *pl, CPUState *cpu) {
-    char op[64];
-    sscanf(pl->operands_raw, "%63s", op);
-    set_operand(op, cpu, 0);
-}
-
-/* NOT op */
-void exec_not(const ParsedLine *pl, CPUState *cpu) {
-    char op[64];
-    sscanf(pl->operands_raw, "%63s", op);
-    uint16_t v = ~get_operand(op, cpu);
-    set_operand(op, cpu, v);
-}
-
-/* INC op */
-void exec_inc(const ParsedLine *pl, CPUState *cpu) {
-    char op[64];
-    sscanf(pl->operands_raw, "%63s", op);
-    uint16_t v = get_operand(op, cpu) + 1;
-    set_operand(op, cpu, v);
-}
-
-/* DEC op */
-void exec_dec(const ParsedLine *pl, CPUState *cpu) {
-    char op[64];
-    sscanf(pl->operands_raw, "%63s", op);
-    uint16_t v = get_operand(op, cpu) - 1;
-    set_operand(op, cpu, v);
-}
-
-/* JMP label */
-void exec_jmp(const ParsedLine *pl, CPUState *cpu) {
-    char lbl[64];
-    sscanf(pl->operands_raw, "%63s", lbl);
-    Symbol *sym = lookup_symbol(cpu->symtab, lbl);
-    if (!sym) { print_error("Unknown label for JMP"); return; }
-    cpu->PC = sym->address;
-}
-
-/* BNE label */
-void exec_bne(const ParsedLine *pl, CPUState *cpu) {
-    char lbl[64];
-    sscanf(pl->operands_raw, "%63s", lbl);
-    if (!cpu->zero_flag) {
-        Symbol *sym = lookup_symbol(cpu->symtab, lbl);
-        if (!sym) { print_error("Unknown label for BNE"); return; }
-        cpu->PC = sym->address;
+    int opc = opcode_to_num(pl->opcode);
+    if (opc < 0) {
+        print_error("Unrecognized opcode");
+        return 0;
     }
-}
+    word0 |= (uint16_t)(opc & 0xF) << 12;
 
-/* JSR label */
-void exec_jsr(const ParsedLine *pl, CPUState *cpu) {
-    char lbl[64];
-    sscanf(pl->operands_raw, "%63s", lbl);
-    Symbol *sym = lookup_symbol(cpu->symtab, lbl);
-    if (!sym) { print_error("Unknown label for JSR"); return; }
-    /* store return address in R7 */
-    cpu->regs[7] = cpu->PC;
-    cpu->PC = sym->address;
-}
+    char src[64] = {0};
+    char dst[64] = {0};
+    bool has_src = false, has_dst = false;
 
-/* RED op */
-void exec_red(const ParsedLine *pl, CPUState *cpu) {
-    char op[64];
-    sscanf(pl->operands_raw, "%63s", op);
-    int v;
-    if (scanf("%d", &v)!=1) print_error("RED: failed to read");
-    set_operand(op, cpu, (uint16_t)v);
-}
+    /* determine operand forms */
+    if (opc <= 4) { /* two-operand instructions */
+        sscanf(pl->operands_raw, "%63[^,],%63s", src, dst);
+        has_src = has_dst = true;
+    } else if (opc == 14) {
+        /* STOP has no operands */
+    } else { /* single operand */
+        sscanf(pl->operands_raw, "%63s", dst);
+        has_dst = true;
+    }
 
-/* PRN op */
-void exec_prn(const ParsedLine *pl, CPUState *cpu) {
-    char op[64];
-    sscanf(pl->operands_raw, "%63s", op);
-    printf("%d\n", get_operand(op, cpu));
-}
+    if (has_src) {
+        int mode, reg; uint16_t extra;
+        int needs = parse_operand(src, cpu, &mode, &reg, &extra);
+        word0 |= (uint16_t)(mode & 0x7) << 9;
+        word0 |= (uint16_t)(reg  & 0x7) << 6;
+        if (needs) out_words[count++] = extra;
+    }
+    if (has_dst) {
+        int mode, reg; uint16_t extra;
+        int needs = parse_operand(dst, cpu, &mode, &reg, &extra);
+        word0 |= (uint16_t)(mode & 0x7) << 3;
+        word0 |= (uint16_t)(reg  & 0x7);
+        if (needs) out_words[count++] = extra;
+    }
 
-/* STOP */
-void exec_stop(const ParsedLine *pl, CPUState *cpu) {
-    (void)pl; (void)cpu;
-    exit(0);
+    out_words[0] = word0;
+    return count;
 }
 

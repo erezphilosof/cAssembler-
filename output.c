@@ -4,8 +4,9 @@
 #include "utils.h"  // ל-format של שורות, convert_to_base4 וכד'
 
 bool write_object_file(const char *filename,
-                       const uint16_t *memory,
+                       const uint16_t *instructions,
                        int instruction_count,
+                       const uint16_t *data,
                        int data_count)
 {
     FILE *f = fopen(filename, "w");
@@ -14,10 +15,16 @@ bool write_object_file(const char *filename,
     // שורה ראשונה: מספר הוראות ומספר מילים בקובץ נתונים
     fprintf(f, "%d %d\n", instruction_count, data_count);
 
-    // הבא – נניח קידוד ה-machine words בבסיס 4
-    for (int i = 0; i < instruction_count + data_count; i++) {
+    // הוראות מקודדות
+    for (int i = 0; i < instruction_count; i++) {
         char buf[32];
-        convert_to_base4(memory[i], buf);       // מ-utils
+        convert_to_base4(instructions[i], buf);
+        fprintf(f, "%s\n", buf);
+    }
+    // ואחריהן קטע הנתונים
+    for (int i = 0; i < data_count; i++) {
+        char buf[32];
+        convert_to_base4(data[i], buf);
         fprintf(f, "%s\n", buf);
     }
     fclose(f);
