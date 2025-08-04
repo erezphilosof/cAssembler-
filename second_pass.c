@@ -2,11 +2,21 @@
 
 #include "second_pass.h"
 #include "error.h"
+#include "symbol_table.h"
 
 /* Second pass: execute each instruction in order (fills cpu.memory) */
 bool second_pass(ParsedLine *lines, int line_count, CPUState *cpu) {
     for (int i = 0; i < line_count; i++) {
         ParsedLine *pl = &lines[i];
+
+        /* Handle .entry directives: mark symbol as entry */
+        if (pl->type == STMT_DIRECTIVE && pl->dir_type == DIR_ENTRY) {
+            if (!update_symbol_type(cpu->symtab, pl->directive_args, SYM_ENTRY)) {
+                print_error("Undefined entry label: %s", pl->directive_args);
+            }
+            continue; /* no machine code emitted */
+        }
+
         if (pl->type != STMT_INSTRUCTION) continue;
         /* Dispatch based on opcode string */
         if      (strcasecmp(pl->opcode,"MOV")==0) exec_mov(pl,cpu);
