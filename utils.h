@@ -26,4 +26,16 @@ bool is_valid_label(const char* str);
 // Prints an error message and exits the program
 void error_exit(const char* msg);
 
+// Returns true if operand is register R0..R7
+bool is_register(const char *s);
+// Return register number 0-7 or -1 if invalid
+int  reg_number(const char *s);
+
+// Convert value to base4 string
+void convert_to_base4(unsigned int value, char *out);
+
+// Helper string utilities used by main
+const char *strip_extension(const char *filename);
+char *strcat_printf(const char *fmt, const char *arg);
+
 #endif // UTILS_H

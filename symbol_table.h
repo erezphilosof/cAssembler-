@@ -9,32 +9,43 @@
 typedef enum {
     SYM_CODE,
     SYM_DATA,
-    SYM_ENTRY,
-    SYM_EXTERNAL
+    SYM_EXTERNAL,
+    SYM_ENTRY
 } SymbolType;
 
-// The symbol structure
+// The symbol structure (linked list node)
 typedef struct Symbol {
-    char name[32];
-    int address;
-    SymbolType type;
-    struct Symbol* next;
+    char            name[32];
+    int             address;
+    SymbolType      type;
+    struct Symbol  *next;
 } Symbol;
 
-// Adds a new symbol to the table. Returns pointer to new symbol (or NULL if duplicate).
-Symbol* add_symbol(Symbol** table, const char* name, int address, SymbolType type);
+// Wrapper for head pointer so callers can treat it as an object
+typedef struct {
+    Symbol *head;
+} SymbolTable;
 
-// Finds a symbol by name. Returns pointer if found, else NULL.
-Symbol* find_symbol(Symbol* table, const char* name);
+/* Initialize empty table */
+void     init_symbol_table(SymbolTable *table);
 
-// Updates the type of a symbol (e.g., for marking as entry or external).
-bool update_symbol_type(Symbol* table, const char* name, SymbolType new_type);
+/* Adds a new symbol. Returns pointer to new symbol or NULL on duplicate/alloc failure */
+Symbol*  add_symbol(SymbolTable *table, const char* name, int address, SymbolType type);
 
-// Prints all symbols (for debug)
-void print_symbol_table(Symbol* table);
+/* Find a symbol by name */
+Symbol*  find_symbol(SymbolTable *table, const char* name);
 
-// Frees all memory of the table
-void free_symbol_table(Symbol* table);
+/* Update symbol type (used for .entry/.extern) */
+bool     update_symbol_type(SymbolTable *table, const char* name, SymbolType new_type);
+
+/* Relocate data symbols by adding IC to their addresses */
+void     relocate_data_symbols(SymbolTable *table, int IC);
+
+/* Print table (debug) */
+void     print_symbol_table(const SymbolTable *table);
+
+/* Free all memory */
+void     free_symbol_table(SymbolTable *table);
 
 #endif // SYMBOL_TABLE_H
 

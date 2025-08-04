@@ -29,12 +29,11 @@ bool write_entries_file(const char *filename,
 {
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ent"); return false; }
-    // לכל סימבול שסומן .entry
-    for (int i = 0; i < symtab->count; i++) {
-        const Symbol *s = &symtab->symbols[i];
-        if (s->is_entry) {
-            fprintf(f, "%s %04d\n", s->name, s->address);
-        }
+    const Symbol *cur = symtab ? symtab->head : NULL;
+    while (cur) {
+        if (cur->type == SYM_ENTRY)
+            fprintf(f, "%s %04d\n", cur->name, cur->address);
+        cur = cur->next;
     }
     fclose(f);
     return true;
@@ -45,10 +44,11 @@ bool write_externals_file(const char *filename,
 {
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ext"); return false; }
-    // בטבלת הזיקוצים החיצוניים (נשמרה במהלך second pass)
-    for (int i = 0; i < symtab->ext_count; i++) {
-        const ExtRef *er = &symtab->externals[i];
-        fprintf(f, "%s %04d\n", er->name, er->address);
+    const Symbol *cur = symtab ? symtab->head : NULL;
+    while (cur) {
+        if (cur->type == SYM_EXTERNAL)
+            fprintf(f, "%s %04d\n", cur->name, cur->address);
+        cur = cur->next;
     }
     fclose(f);
     return true;
