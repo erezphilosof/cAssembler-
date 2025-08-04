@@ -108,9 +108,19 @@ int main(int argc, char **argv) {
 
     /* 5. Emit files */
     const char *base = strip_extension(argv[1]);
-    write_object_file(   strcat_printf("%s.ob", base), cpu.memory, IC, DC);
-    write_entries_file(  strcat_printf("%s.ent", base), &st);
-    write_externals_file(strcat_printf("%s.ext", base), &st);
+    char *fname;
+
+    fname = strcat_printf(base, ".ob");
+    write_object_file(fname, cpu.memory, IC, DC);
+    free(fname);
+
+    fname = strcat_printf(base, ".ent");
+    write_entries_file(fname, &st);
+    free(fname);
+
+    fname = strcat_printf(base, ".ext");
+    write_externals_file(fname, &st);
+    free(fname);
 
     /* Cleanup */
     free(cpu.memory);

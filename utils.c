@@ -103,3 +103,69 @@ void error_exit(const char* msg) {
     exit(EXIT_FAILURE);
 }
 
+// Replace all occurrences of substring `old` in `src` with `new_sub`.
+// Returns a newly allocated string or NULL on allocation failure.
+char *replace_substring(const char *src, const char *old, const char *new_sub) {
+    if (!src || !old || !new_sub) return NULL;
+
+    size_t src_len = strlen(src);
+    size_t old_len = strlen(old);
+    size_t new_len = strlen(new_sub);
+
+    if (old_len == 0) {
+        char *dup = malloc(src_len + 1);
+        if (!dup) return NULL;
+        strcpy(dup, src);
+        return dup;
+    }
+
+    size_t count = 0;
+    const char *p = src;
+    while ((p = strstr(p, old)) != NULL) {
+        count++;
+        p += old_len;
+    }
+
+    size_t result_len = src_len + count * (new_len - old_len);
+    char *result = malloc(result_len + 1);
+    if (!result) return NULL;
+
+    const char *src_p = src;
+    char *dst_p = result;
+    while ((p = strstr(src_p, old)) != NULL) {
+        size_t chunk = (size_t)(p - src_p);
+        memcpy(dst_p, src_p, chunk);
+        dst_p += chunk;
+        memcpy(dst_p, new_sub, new_len);
+        dst_p += new_len;
+        src_p = p + old_len;
+    }
+    strcpy(dst_p, src_p);
+
+    return result;
+}
+
+// Concatenate `base` and `suffix` into newly allocated string.
+// Returns NULL on allocation failure.
+char *strcat_printf(const char *base, const char *suffix) {
+    if (!base) base = "";
+    if (!suffix) suffix = "";
+    size_t len = strlen(base) + strlen(suffix);
+    char *res = malloc(len + 1);
+    if (!res) return NULL;
+    strcpy(res, base);
+    strcat(res, suffix);
+    return res;
+}
+
+// Strip file extension from `filename` and return a static buffer.
+const char *strip_extension(const char *filename) {
+    static char buf[256];
+    if (!filename) return NULL;
+    strncpy(buf, filename, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    char *dot = strrchr(buf, '.');
+    if (dot) *dot = '\0';
+    return buf;
+}
+

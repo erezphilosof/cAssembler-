@@ -108,16 +108,18 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
             }
             /* for each body line, substitute %param% */
             for (int b=0; b<md->body_len; b++) {
-                char tmp[MAX_LINE_LEN];
-                strncpy(tmp, md->body[b], MAX_LINE_LEN-1);
-                tmp[MAX_LINE_LEN-1] = '\0';
+                char *tmp = strdup(md->body[b]);
+                if (!tmp) error_exit("Memory allocation failed");
                 for (int pi=0; pi<md->param_count; pi++) {
                     char pattern[64], repl[64];
                     snprintf(pattern, sizeof(pattern), "%%%s%%", md->params[pi]);
                     snprintf(repl, sizeof(repl), "%s", (pi<ac?args[pi]:""));
-                    replace_substring(tmp, pattern, repl);  /* from utils */
+                    char *repl_tmp = replace_substring(tmp, pattern, repl);
+                    free(tmp);
+                    if (!repl_tmp) error_exit("Memory allocation failed");
+                    tmp = repl_tmp;
                 }
-                out[oc++] = strdup(tmp);
+                out[oc++] = tmp;
             }
         }
     }
