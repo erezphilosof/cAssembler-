@@ -7,6 +7,7 @@
 #include "symbol_table.h"
 #include "instructions.h"
 #include "output.h"
+#include "error.h"
 
 static ParsedLine *all_lines = NULL;
 static int         line_count = 0;
@@ -59,7 +60,7 @@ static bool second_pass(CPUState *cpu) {
 
 int main(int argc, char **argv) {
     if (argc != 2) {
-        fprintf(stderr,"Usage: %s <source.as>\n",argv[0]);
+        print_error("Usage: %s <source.as>", argv[0]);
         return 1;
     }
 
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
 
     int IC, DC;
     if (!first_pass(tmp, &st, &IC, &DC)) {
-        fprintf(stderr,"First pass failed\n");
+        print_error("First pass failed");
         return 1;
     }
 
@@ -101,7 +102,7 @@ int main(int argc, char **argv) {
 
     /* 4. Second pass: execute instructions */
     if (!second_pass(&cpu)) {
-        fprintf(stderr,"Second pass failed\n");
+        print_error("Second pass failed");
         return 1;
     }
 

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "utils.h"          /* trim_string, is_valid_label, print_error */
+#include "utils.h"          /* trim_string, is_valid_label */
 #include "symbol_table.h"   /* add_label, add_label_external, relocate_data_symbols */
 #include "error.h"          /* get_error_count */
 

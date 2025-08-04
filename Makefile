@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99
+CFLAGS = -Wall -Wextra -std=c99 -Isrc
 
-SRCS = main.c parser.c macro.c symbol_table.c instructions.c output.c utils.c
+SRCS = main.c parser.c macro.c symbol_table.c instructions.c output.c utils.c src/error.c
 OBJS = $(SRCS:.c=.o)
 
 assembler: $(OBJS)
