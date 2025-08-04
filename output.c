@@ -30,8 +30,7 @@ bool write_entries_file(const char *filename,
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ent"); return false; }
     // לכל סימבול שסומן .entry
-    for (int i = 0; i < symtab->count; i++) {
-        const Symbol *s = &symtab->symbols[i];
+    for (const Symbol *s = symtab->head; s; s = s->next) {
         if (s->is_entry) {
             fprintf(f, "%s %04d\n", s->name, s->address);
         }

@@ -19,11 +19,13 @@ int resolve_operand(const char *operand, CPUState *cpu) {
         return cpu->regs[r];
     }
     /* label / memory direct */
-    Symbol *sym = lookup_symbol(&cpu->memory[0], operand);
+    Symbol *sym = lookup_symbol(cpu->symtab, operand);
     if (!sym) {
         print_error("Unknown label");
         return 0;
     }
+    if (sym->is_external)
+        mark_external(cpu->symtab, sym->name, cpu->PC);
     return cpu->memory[sym->address];
 }
 
@@ -39,11 +41,13 @@ void set_operand(const char *operand, CPUState *cpu, uint16_t value) {
         return;
     }
     /* direct memory */
-    Symbol *sym = lookup_symbol(&cpu->memory[0], operand);
+    Symbol *sym = lookup_symbol(cpu->symtab, operand);
     if (!sym) {
         print_error("Unknown label for STORE");
         return;
     }
+    if (sym->is_external)
+        mark_external(cpu->symtab, sym->name, cpu->PC);
     cpu->memory[sym->address] = value;
 }
 
@@ -97,8 +101,10 @@ void exec_lea(const ParsedLine *pl, CPUState *cpu) {
     char src[64], dst[64];
     sscanf(pl->operands_raw, "%63[^,],%63s", src, dst);
     /* src must be label */
-    Symbol *sym = lookup_symbol(&cpu->memory[0], src);
+    Symbol *sym = lookup_symbol(cpu->symtab, src);
     if (!sym) { print_error("Unknown label for LEA"); return; }
+    if (sym->is_external)
+        mark_external(cpu->symtab, sym->name, cpu->PC);
     set_operand(dst, cpu, sym->address);
 }
 
@@ -137,8 +143,10 @@ void exec_dec(const ParsedLine *pl, CPUState *cpu) {
 void exec_jmp(const ParsedLine *pl, CPUState *cpu) {
     char lbl[64];
     sscanf(pl->operands_raw, "%63s", lbl);
-    Symbol *sym = lookup_symbol(&cpu->memory[0], lbl);
+    Symbol *sym = lookup_symbol(cpu->symtab, lbl);
     if (!sym) { print_error("Unknown label for JMP"); return; }
+    if (sym->is_external)
+        mark_external(cpu->symtab, sym->name, cpu->PC);
     cpu->PC = sym->address;
 }
 
@@ -147,8 +155,10 @@ void exec_bne(const ParsedLine *pl, CPUState *cpu) {
     char lbl[64];
     sscanf(pl->operands_raw, "%63s", lbl);
     if (!cpu->zero_flag) {
-        Symbol *sym = lookup_symbol(&cpu->memory[0], lbl);
+        Symbol *sym = lookup_symbol(cpu->symtab, lbl);
         if (!sym) { print_error("Unknown label for BNE"); return; }
+        if (sym->is_external)
+            mark_external(cpu->symtab, sym->name, cpu->PC);
         cpu->PC = sym->address;
     }
 }
@@ -157,8 +167,10 @@ void exec_bne(const ParsedLine *pl, CPUState *cpu) {
 void exec_jsr(const ParsedLine *pl, CPUState *cpu) {
     char lbl[64];
     sscanf(pl->operands_raw, "%63s", lbl);
-    Symbol *sym = lookup_symbol(&cpu->memory[0], lbl);
+    Symbol *sym = lookup_symbol(cpu->symtab, lbl);
     if (!sym) { print_error("Unknown label for JSR"); return; }
+    if (sym->is_external)
+        mark_external(cpu->symtab, sym->name, cpu->PC);
     /* store return address in R7 */
     cpu->regs[7] = cpu->PC;
     cpu->PC = sym->address;
