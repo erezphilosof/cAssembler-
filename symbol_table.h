@@ -21,7 +21,26 @@ typedef struct Symbol {
     struct Symbol* next;
 } Symbol;
 
-typedef Symbol SymbolTable; /* alias for clarity */
+/*
+ * The symbol table is represented as a simple singly linked list.
+ * We use a dummy head node (of type SymbolTable) whose 'next' pointer
+ * points to the first real symbol.  This allows functions that modify
+ * the list to receive a pointer to the head without needing a pointer
+ * to a pointer in most call sites.
+ */
+typedef Symbol SymbolTable; /* alias for clarity (dummy head node) */
+
+/* initialise an empty symbol table (sets the head's fields to defaults) */
+void init_symbol_table(SymbolTable *table);
+
+/* Add a label (code or data) to the table.  Returns false on duplicate. */
+bool add_label(SymbolTable *table, const char *name, int address, bool is_data);
+
+/* Add an external label to the table.  Returns false on duplicate. */
+bool add_label_external(SymbolTable *table, const char *name);
+
+/* Relocate all data symbols by adding 'offset' to their addresses. */
+void relocate_data_symbols(SymbolTable *table, int offset);
 
 // Adds a new symbol to the table. Returns pointer to new symbol (or NULL if duplicate).
 Symbol* add_symbol(Symbol** table, const char* name, int address, SymbolType type);
