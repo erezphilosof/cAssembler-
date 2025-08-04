@@ -49,17 +49,14 @@ bool write_entries_file(const char *filename,
 }
 
 bool write_externals_file(const char *filename,
-                          const Symbol *symtab)
+                          const ExternalUse *uses)
 {
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ext"); return false; }
-    // בדיקה על כל הסימבולים והדפסת אלו המסומנים כ-external
-    for (const Symbol *s = symtab; s; s = s->next) {
-        if (s->type == SYM_EXTERNAL) {
-            char buf[32];
-            convert_to_base4(s->address, buf);
-            fprintf(f, "%s %s\n", s->name, buf);
-        }
+    for (const ExternalUse *u = uses; u; u = u->next) {
+        char buf[32];
+        convert_to_base4(u->address, buf);
+        fprintf(f, "%s %s\n", u->name, buf);
     }
     fclose(f);
     return true;

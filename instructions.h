@@ -16,6 +16,7 @@ typedef struct {
     bool      zero_flag;
     bool      sign_flag;
     SymbolTable *symtab;  /* symbol table for label resolution */
+    ExternalUse *ext_uses; /* list of external symbol usages */
 } CPUState;
 
 /* Encode an instruction into machine words.
