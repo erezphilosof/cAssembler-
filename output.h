@@ -12,11 +12,11 @@ bool write_object_file(const char *filename,
 
 /* Writes all labels שסומנו כ-entry ל-.ent */
 bool write_entries_file(const char *filename,
-                        const SymbolTable *symtab);
+                        const Symbol *symtab);
 
 /* כותב את כל הזיקוצים החיצוניים (extern) ל-.ext */
 bool write_externals_file(const char *filename,
-                          const SymbolTable *symtab);
+                          const Symbol *symtab);
 
 #endif /* OUTPUT_H */
 
