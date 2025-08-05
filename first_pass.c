@@ -10,6 +10,27 @@
 #include "error.h"
 #include "data_segment.h"
 
+/* Detect matrix operand syntax: <label>[rX][rY]. Returns true if valid. */
+static bool is_matrix_operand(const char *op) {
+    const char *b1 = strchr(op, '[');
+    if (!b1) return false;
+    const char *b2 = strchr(b1 + 1, ']');
+    const char *b3 = b2 ? strchr(b2 + 1, '[') : NULL;
+    const char *b4 = b3 ? strchr(b3 + 1, ']') : NULL;
+    if (!b2 || !b3 || !b4 || b3 != b2 + 1 || *(b4 + 1) != '\0' || b1 == op) {
+        print_error("Invalid matrix operand");
+        return false;
+    }
+    char r1[8], r2[8];
+    strncpy(r1, b1 + 1, b2 - b1 - 1); r1[b2 - b1 - 1] = '\0';
+    strncpy(r2, b3 + 1, b4 - b3 - 1); r2[b4 - b3 - 1] = '\0';
+    if (!is_register(r1) || !is_register(r2)) {
+        print_error("Invalid matrix register");
+        return false;
+    }
+    return true;
+}
+
 /* Estimate number of machine words for an instruction */
 static int count_instruction_words(const ParsedLine *pl) {
     int words = 1; /* base word */
@@ -24,17 +45,24 @@ static int count_instruction_words(const ParsedLine *pl) {
     char ops[2][80];
     int n = split_string(pl->operands_raw, ',', ops, 2);
     bool reg_op[2] = {false, false};
-    for (int i = 0; i < n; i++)
-        reg_op[i] = is_register(ops[i]);
+    bool mat_op[2] = {false, false};
+    for (int i = 0; i < n; i++) {
+        mat_op[i] = is_matrix_operand(ops[i]);
+        if (!mat_op[i])
+            reg_op[i] = is_register(ops[i]);
+    }
 
     if (n == 1) {
-        words += reg_op[0] ? 0 : 1;
+        if (mat_op[0]) words += 2;
+        else words += reg_op[0] ? 0 : 1;
     } else if (n == 2) {
         if (reg_op[0] && reg_op[1]) {
             words += 1; /* two registers share a word */
         } else {
-            if (!reg_op[0]) words++;
-            if (!reg_op[1]) words++;
+            for (int i = 0; i < 2; i++) {
+                if (mat_op[i]) words += 2;
+                else if (!reg_op[i]) words++;
+            }
         }
     }
     return words;
