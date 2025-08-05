@@ -15,17 +15,40 @@
 
 /* Read whole file into a lines[] array */
 static bool read_input(const char *fname, char ***out_lines, int *out_n) {
-    FILE *f = fopen(fname,"r");
+    FILE *f = fopen(fname, "r");
     if (!f) { perror("open"); return false; }
-    char **lines = malloc(sizeof(char*) * 2048);
+
+    size_t capacity = 16;
+    char **lines = malloc(sizeof(*lines) * capacity);
+    if (!lines) { fclose(f); return false; }
+
     int n = 0;
     char buf[256];
-    while (fgets(buf,sizeof(buf),f)) {
-        lines[n++] = strdup(buf);
+    while (fgets(buf, sizeof(buf), f)) {
+        if (n >= (int)capacity) {
+            capacity *= 2;
+            char **tmp = realloc(lines, sizeof(*tmp) * capacity);
+            if (!tmp) {
+                for (int i = 0; i < n; i++) free(lines[i]);
+                free(lines);
+                fclose(f);
+                return false;
+            }
+            lines = tmp;
+        }
+        lines[n] = strdup(buf);
+        if (!lines[n]) {
+            for (int i = 0; i < n; i++) free(lines[i]);
+            free(lines);
+            fclose(f);
+            return false;
+        }
+        n++;
     }
+
     fclose(f);
     *out_lines = lines;
-    *out_n     = n;
+    *out_n = n;
     return true;
 }
 
