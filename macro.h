@@ -27,6 +27,7 @@ typedef struct {
 
 /* Public API: */
 void     init_macro_table(MacroTable *mt);
+/* Release memory used by macros and reset the table */
 void     free_macro_table(MacroTable *mt);
 bool     scan_macros(const char *lines[], int line_count, MacroTable *mt);
 /* Take input lines + macro table → produce output lines (caller frees) */

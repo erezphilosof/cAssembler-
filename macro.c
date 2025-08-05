@@ -17,10 +17,13 @@ void init_macro_table(MacroTable *mt) {
 /* Free any dynamically allocated memory inside the macro table */
 void free_macro_table(MacroTable *mt) {
     for (int i = 0; i < mt->count; i++) {
-        for (int j = 0; j < mt->macros[i].body_len; j++) {
-            free(mt->macros[i].body[j]);
+        MacroDef *md = &mt->macros[i];
+        for (int j = 0; j < md->body_len; j++) {
+            free(md->body[j]);
+            md->body[j] = NULL;
         }
-        mt->macros[i].body_len = 0;
+        md->body_len = 0;
+        md->param_count = 0;
     }
     mt->count = 0;
 }
