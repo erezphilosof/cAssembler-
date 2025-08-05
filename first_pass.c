@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include "parser.h"
 #include "symbol_table.h"
@@ -12,6 +13,11 @@
 /* Estimate number of machine words for an instruction */
 static int count_instruction_words(const ParsedLine *pl) {
     int words = 1; /* base word */
+    /* Instructions without operands (RTS/STOP) occupy just one word */
+    if (strcasecmp(pl->opcode, "RTS") == 0 ||
+        strcasecmp(pl->opcode, "STOP") == 0)
+        return words;
+
     if (pl->operands_raw[0] == '\0')
         return words;
 
