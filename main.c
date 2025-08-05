@@ -29,86 +29,96 @@ static bool read_input(const char *fname, char ***out_lines, int *out_n) {
     return true;
 }
 
-
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        print_error("Usage: %s <source.as>", argv[0]);
-        return 1;
-    }
-
-    /* 1. Read + macro‐expand */
-    char **raw; int raw_n;
-    if (!read_input(argv[1], &raw, &raw_n)) return 1;
+static bool assemble_file(const char *fname) {
+    bool ok = false;
+    char **raw = NULL; int raw_n = 0;
+    char **flat = NULL; int flat_n = 0;
     MacroTable mt; init_macro_table(&mt);
-    if (!scan_macros((const char**)raw,raw_n,&mt)) return 1;
-    int flat_n;
-    char **flat = expand_macros((const char**)raw,raw_n,&flat_n,&mt);
-
-    /* 2. First pass */
     SymbolTable st; init_symbol_table(&st);
-    ParsedLine *plarr = malloc(sizeof(*plarr)*flat_n);
+    ParsedLine *plarr = NULL;
     DataSegment data_seg; init_data_segment(&data_seg);
+    FILE *tmp = NULL;
+    CPUState cpu = {0};
+    int IC = 0, DC = 0;
 
-    FILE *tmp = tmpfile();
-    for(int i=0;i<flat_n;i++) fputs(flat[i],tmp);
-    fseek(tmp,0,SEEK_SET);
+    if (!read_input(fname, &raw, &raw_n)) goto cleanup;
+    if (!scan_macros((const char**)raw, raw_n, &mt)) goto cleanup;
+    flat = expand_macros((const char**)raw, raw_n, &flat_n, &mt);
 
-    int IC, DC;
+    plarr = malloc(sizeof(*plarr) * flat_n);
+    if (!plarr) goto cleanup;
+
+    tmp = tmpfile();
+    if (!tmp) goto cleanup;
+    for (int i = 0; i < flat_n; i++) fputs(flat[i], tmp);
+    fseek(tmp, 0, SEEK_SET);
+
     if (!first_pass(tmp, &st, &IC, &DC, &data_seg)) {
         print_error("First pass failed");
-        return 1;
+        goto cleanup;
     }
 
-    /* 3. Allocate CPU & memory */
-    CPUState cpu = {0};
     cpu.memory = calloc(IC, sizeof(uint16_t));
-    cpu.PC     = 0;
+    cpu.PC = 0;
     cpu.symtab = &st;
+    if (!cpu.memory) goto cleanup;
 
-    /* Re‐parse into ParsedLine structs */
-    fseek(tmp,0,SEEK_SET);
-    for (int i=0; i<flat_n; i++) {
+    fseek(tmp, 0, SEEK_SET);
+    for (int i = 0; i < flat_n; i++) {
         parse_line(flat[i], &plarr[i], i);
     }
-    fclose(tmp);
+    fclose(tmp); tmp = NULL;
 
-    /* 4. Second pass: execute instructions */
     if (!second_pass(plarr, flat_n, &cpu)) {
         print_error("Second pass failed");
-        return 1;
+        goto cleanup;
     }
 
-    /* 5. Emit files */
-    const char *base = strip_extension(argv[1]);
-    char *fname;
+    const char *base = strip_extension(fname);
+    char *outname;
 
     if (data_seg.count != DC) {
         print_error("Data count mismatch");
     }
 
-    fname = strcat_printf(base, ".ob");
-    write_object_file(fname, cpu.memory, IC, data_seg.words, DC);
-    free(fname);
+    outname = strcat_printf(base, ".ob");
+    write_object_file(outname, cpu.memory, IC, data_seg.words, DC);
+    free(outname);
 
-    fname = strcat_printf(base, ".ent");
-    write_entries_file(fname, &st);
-    free(fname);
+    outname = strcat_printf(base, ".ent");
+    write_entries_file(outname, &st);
+    free(outname);
 
-    fname = strcat_printf(base, ".ext");
-    write_externals_file(fname, cpu.ext_uses);
-    free(fname);
+    outname = strcat_printf(base, ".ext");
+    write_externals_file(outname, cpu.ext_uses);
+    free(outname);
 
-    /* Cleanup */
-    free(cpu.memory);
+    ok = true;
+
+cleanup:
+    if (tmp) fclose(tmp);
+    if (cpu.memory) free(cpu.memory);
     free_data_segment(&data_seg);
     free_external_uses(cpu.ext_uses);
     free_symbol_table(&st);
-    for(int i=0;i<flat_n;i++) free(flat[i]);
-    free(flat);
-    for(int i=0;i<raw_n;i++) free(raw[i]);
-    free(raw);
+    free_macro_table(&mt);
+    if (flat) { for (int i = 0; i < flat_n; i++) free(flat[i]); free(flat); }
+    if (raw) { for (int i = 0; i < raw_n; i++) free(raw[i]); free(raw); }
     free(plarr);
+    return ok;
+}
 
-    return 0;
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        print_error("Usage: %s <source.as> [source2.as ...]", argv[0]);
+        return 1;
+    }
+
+    int status = 0;
+    for (int i = 1; i < argc; i++) {
+        if (!assemble_file(argv[i]))
+            status = 1;
+    }
+    return status;
 }
 

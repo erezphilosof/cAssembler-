@@ -14,6 +14,17 @@ void init_macro_table(MacroTable *mt) {
     mt->count = 0;
 }
 
+/* Free any dynamically allocated memory inside the macro table */
+void free_macro_table(MacroTable *mt) {
+    for (int i = 0; i < mt->count; i++) {
+        for (int j = 0; j < mt->macros[i].body_len; j++) {
+            free(mt->macros[i].body[j]);
+        }
+        mt->macros[i].body_len = 0;
+    }
+    mt->count = 0;
+}
+
 /* Helper: find macro definition by name */
 static MacroDef *find_macro(MacroTable *mt, const char *name) {
     for (int i = 0; i < mt->count; i++)
