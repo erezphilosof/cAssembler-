@@ -34,10 +34,18 @@ bool write_object_file(const char *filename,
 bool write_entries_file(const char *filename,
                         const Symbol *symtab)
 {
+    /* first scan to see if there are any entry symbols */
+    const Symbol *s = symtab;
+    while (s && s->type != SYM_ENTRY)
+        s = s->next;
+    if (!s)
+        return false; /* no entries: don't create the file */
+
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ent"); return false; }
-    // לכל סימבול שסומן .entry בטבלה המקושרת
-    for (const Symbol *s = symtab; s; s = s->next) {
+
+    /* s already points to the first entry symbol */
+    for (; s; s = s->next) {
         if (s->type == SYM_ENTRY) {
             char buf[32];
             convert_to_base4(s->address, buf);
@@ -51,6 +59,10 @@ bool write_entries_file(const char *filename,
 bool write_externals_file(const char *filename,
                           const ExternalUse *uses)
 {
+    /* If there are no recorded external usages, nothing to do */
+    if (!uses)
+        return false;
+
     FILE *f = fopen(filename, "w");
     if (!f) { perror("open .ext"); return false; }
     for (const ExternalUse *u = uses; u; u = u->next) {
