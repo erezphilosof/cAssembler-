@@ -30,7 +30,7 @@ static int opcode_to_num(const char *opc) {
     return -1;
 }
 
-enum { AM_IMMEDIATE = 0, AM_DIRECT = 1, AM_REGISTER = 2 };
+enum { AM_IMMEDIATE = 0, AM_DIRECT = 1, AM_REGISTER = 2, AM_MATRIX = 3 };
 
 /* Parse one operand and return addressing mode bits and optional extra word */
 static int parse_operand(const char *op,
@@ -55,6 +55,49 @@ static int parse_operand(const char *op,
         *extra_out = 0;
         return 0;
     }
+
+    /* matrix addressing: <label>[rX][rY] */
+    const char *b1 = strchr(op, '[');
+    if (b1) {
+        const char *b2 = strchr(b1 + 1, ']');
+        const char *b3 = b2 ? strchr(b2 + 1, '[') : NULL;
+        const char *b4 = b3 ? strchr(b3 + 1, ']') : NULL;
+        if (!b2 || !b3 || !b4 || b3 != b2 + 1 || *(b4 + 1) != '\0' || b1 == op) {
+            print_error("Invalid matrix operand: %s", op);
+            *mode_out = AM_MATRIX;
+            *reg_out = 0;
+            *extra_out = 0;
+            return 0;
+        }
+        char label[64];
+        strncpy(label, op, b1 - op);
+        label[b1 - op] = '\0';
+        char r1[8];
+        char r2[8];
+        strncpy(r1, b1 + 1, b2 - b1 - 1);
+        r1[b2 - b1 - 1] = '\0';
+        strncpy(r2, b3 + 1, b4 - b3 - 1);
+        r2[b4 - b3 - 1] = '\0';
+        if (!is_register(r1) || !is_register(r2)) {
+            print_error("Invalid register in matrix operand");
+            *mode_out = AM_MATRIX;
+            *reg_out = 0;
+            *extra_out = 0;
+            return 0;
+        }
+        int reg1 = reg_number(r1);
+        int reg2 = reg_number(r2);
+        *mode_out = AM_MATRIX;
+        *reg_out = reg1;
+        *extra_out = (uint16_t)((reg1 << 3) | reg2);
+        Symbol *sym = lookup_symbol(cpu->symtab, label);
+        if (sym_out) *sym_out = sym;
+        if (!sym) {
+            print_error("Unknown label: %s", label);
+        }
+        return 2; /* label address + registers word */
+    }
+
     /* direct label */
     *mode_out = AM_DIRECT;
     *reg_out = 0;
@@ -102,9 +145,16 @@ int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3
         word0 |= (uint16_t)(mode & 0x7) << 9;
         word0 |= (uint16_t)(reg  & 0x7) << 6;
         if (needs) {
-            if (sym && sym->type == SYM_EXTERNAL)
-                add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
-            out_words[count++] = extra;
+            if (mode == AM_MATRIX) {
+                if (sym && sym->type == SYM_EXTERNAL)
+                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                out_words[count++] = sym ? sym->address : 0;
+                out_words[count++] = extra;
+            } else {
+                if (sym && sym->type == SYM_EXTERNAL)
+                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                out_words[count++] = extra;
+            }
         }
     }
     if (has_dst) {
@@ -113,9 +163,16 @@ int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3
         word0 |= (uint16_t)(mode & 0x7) << 3;
         word0 |= (uint16_t)(reg  & 0x7);
         if (needs) {
-            if (sym && sym->type == SYM_EXTERNAL)
-                add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
-            out_words[count++] = extra;
+            if (mode == AM_MATRIX) {
+                if (sym && sym->type == SYM_EXTERNAL)
+                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                out_words[count++] = sym ? sym->address : 0;
+                out_words[count++] = extra;
+            } else {
+                if (sym && sym->type == SYM_EXTERNAL)
+                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                out_words[count++] = extra;
+            }
         }
     }
 
