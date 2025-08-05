@@ -128,7 +128,12 @@ cleanup:
     free_symbol_table(&st);
     /* free all macro definitions */
     free_macro_table(&mt);
-    if (flat) { for (int i = 0; i < flat_n; i++) free(flat[i]); free(flat); }
+    if (flat) {
+        for (int i = 0; i < flat_n; i++)
+            free(flat[i]);
+        /* free the resized array of expanded lines */
+        free(flat);
+    }
     if (raw) { for (int i = 0; i < raw_n; i++) free(raw[i]); free(raw); }
     free(plarr);
     return ok;

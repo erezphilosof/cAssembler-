@@ -92,7 +92,9 @@ bool scan_macros(const char *lines[], int line_count, MacroTable *mt) {
 
 /* Replace each macro invocation with its body, substituting params */
 char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTable *mt) {
-    char **out = malloc(sizeof(char*) * (in_count * 2));
+    size_t cap = in_count;
+    char **out = malloc(sizeof(char*) * cap);
+    if (!out) error_exit("Memory allocation failed");
     int oc = 0;
 
     for (int i = 0; i < in_count; i++) {
@@ -101,6 +103,12 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
         buf[MAX_LINE_LEN-1] = '\0';
         trim_string(buf);
         if (buf[0]=='\0') {
+            if ((size_t)oc >= cap) {
+                cap *= 2;
+                char **tmp = realloc(out, sizeof(char*) * cap);
+                if (!tmp) error_exit("Memory allocation failed");
+                out = tmp;
+            }
             out[oc++] = strdup(buf);
             continue;
         }
@@ -108,6 +116,12 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
         char *tok = strtok(buf, " \t");
         MacroDef *md = find_macro(mt, tok);
         if (!md) {
+            if ((size_t)oc >= cap) {
+                cap *= 2;
+                char **tmp = realloc(out, sizeof(char*) * cap);
+                if (!tmp) error_exit("Memory allocation failed");
+                out = tmp;
+            }
             out[oc++] = strdup(lines[i]);
         } else {
             /* parse arguments on invocation */
@@ -134,6 +148,12 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
                     free(tmp);
                     if (!repl_tmp) error_exit("Memory allocation failed");
                     tmp = repl_tmp;
+                }
+                if ((size_t)oc >= cap) {
+                    cap *= 2;
+                    char **tmp_arr = realloc(out, sizeof(char*) * cap);
+                    if (!tmp_arr) error_exit("Memory allocation failed");
+                    out = tmp_arr;
                 }
                 out[oc++] = tmp;
             }
