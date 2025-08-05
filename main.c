@@ -86,11 +86,13 @@ static bool assemble_file(const char *fname) {
     free(outname);
 
     outname = strcat_printf(base, ".ent");
-    write_entries_file(outname, &st);
+    if (!write_entries_file(outname, &st))
+        remove(outname);
     free(outname);
 
     outname = strcat_printf(base, ".ext");
-    write_externals_file(outname, cpu.ext_uses);
+    if (!write_externals_file(outname, cpu.ext_uses))
+        remove(outname);
     free(outname);
 
     ok = true;
