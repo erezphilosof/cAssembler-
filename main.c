@@ -82,7 +82,7 @@ static bool assemble_file(const char *fname) {
     }
 
     outname = strcat_printf(base, ".ob");
-    write_object_file(outname, cpu.memory, IC, data_seg.words, DC);
+    write_object_file(outname, cpu.memory, IC, data_seg.words, DC, 0);
     free(outname);
 
     outname = strcat_printf(base, ".ent");

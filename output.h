@@ -9,7 +9,8 @@ bool write_object_file(const char *filename,
                        const uint16_t *instructions,
                        int instruction_count,
                        const uint16_t *data,
-                       int data_count);
+                       int data_count,
+                       int base_address);
 
 /*
  * Write all symbols marked as .entry to a .ent file. Returns true only if the
