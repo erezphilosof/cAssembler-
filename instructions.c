@@ -4,7 +4,12 @@
 
 #include "instructions.h"
 
-/* Opcodes enumeration for encoding */
+/* Opcodes enumeration for encoding
+ * MOV=0  CMP=1  ADD=2  SUB=3  LEA=4
+ * CLR=5  NOT=6  INC=7  DEC=8
+ * JMP=9  BNE=10 JSR=11 RED=12 PRN=13
+ * RTS=14 STOP=15
+ */
 static int opcode_to_num(const char *opc) {
     if      (strcasecmp(opc, "MOV") == 0) return 0;
     else if (strcasecmp(opc, "CMP") == 0) return 1;
@@ -20,7 +25,8 @@ static int opcode_to_num(const char *opc) {
     else if (strcasecmp(opc, "JSR") == 0) return 11;
     else if (strcasecmp(opc, "RED") == 0) return 12;
     else if (strcasecmp(opc, "PRN") == 0) return 13;
-    else if (strcasecmp(opc, "STOP") == 0) return 14;
+    else if (strcasecmp(opc, "RTS")  == 0) return 14;
+    else if (strcasecmp(opc, "STOP") == 0) return 15;
     return -1;
 }
 
@@ -83,8 +89,8 @@ int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3
     if (opc <= 4) { /* two-operand instructions */
         sscanf(pl->operands_raw, "%63[^,],%63s", src, dst);
         has_src = has_dst = true;
-    } else if (opc == 14) {
-        /* STOP has no operands */
+    } else if (opc == 14 || opc == 15) {
+        /* RTS and STOP have no operands */
     } else { /* single operand */
         sscanf(pl->operands_raw, "%63s", dst);
         has_dst = true;
