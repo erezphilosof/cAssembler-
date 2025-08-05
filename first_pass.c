@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,14 +71,18 @@ static int count_instruction_words(const ParsedLine *pl) {
 
 /* First pass: build symbol table, count IC/DC */
 bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSegment *data_seg) {
-    char line[MAX_LINE_LEN];
+    char *line = NULL;
+    size_t linecap = 0;
     int IC = 0, DC = 0, ln = 0;
 
-    while (fgets(line, sizeof(line), src)) {
+    while (getline(&line, &linecap, src) != -1) {
         ++ln;
         ParsedLine pl;
-        if (!parse_line(line, &pl, ln))
+        if (!parse_line(line, &pl, ln)) {
+            free(line);
+            line = NULL;
             continue; /* error already logged */
+        }
 
         /* label addition */
         if (pl.has_label && pl.type != STMT_LABEL_ONLY) {
@@ -145,17 +150,25 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSe
             default:
                 print_error("Unsupported directive");
             }
+            free(line);
+            line = NULL;
             continue;
         }
 
         /* handle instructions */
         if (pl.type == STMT_INSTRUCTION) {
             IC += count_instruction_words(&pl);
+            free(line);
+            line = NULL;
             continue;
         }
 
         /* label-only or empty/comment: do nothing */
+        free(line);
+        line = NULL;
     }
+
+    free(line);
 
     /* relocate all data symbols by IC */
     relocate_data_symbols(symtab, IC);
