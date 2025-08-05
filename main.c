@@ -23,20 +23,25 @@ static bool read_input(const char *fname, char ***out_lines, int *out_n) {
     if (!lines) { fclose(f); return false; }
 
     int n = 0;
-    char buf[256];
-    while (fgets(buf, sizeof(buf), f)) {
+    char *buf = NULL;
+    size_t bufsize = 0;
+    ssize_t read;
+    while ((read = getline(&buf, &bufsize, f)) != -1) {
         if (n >= (int)capacity) {
             capacity *= 2;
             char **tmp = realloc(lines, sizeof(*tmp) * capacity);
             if (!tmp) {
                 for (int i = 0; i < n; i++) free(lines[i]);
                 free(lines);
+                free(buf);
                 fclose(f);
                 return false;
             }
             lines = tmp;
         }
         lines[n] = strdup(buf);
+        free(buf);
+        buf = NULL;
         if (!lines[n]) {
             for (int i = 0; i < n; i++) free(lines[i]);
             free(lines);
@@ -45,6 +50,8 @@ static bool read_input(const char *fname, char ***out_lines, int *out_n) {
         }
         n++;
     }
+
+    free(buf);
 
     fclose(f);
     *out_lines = lines;
