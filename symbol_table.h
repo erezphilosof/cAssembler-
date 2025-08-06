@@ -5,6 +5,9 @@
 
 #include <stdbool.h>
 
+/* Base address for the assembled program in memory */
+#define BASE_ADDRESS 100
+
 // Symbol type: code, data, entry, external
 typedef enum {
     SYM_CODE,
@@ -48,6 +51,9 @@ bool add_label_external(SymbolTable *table, const char *name);
 
 /* Relocate all data symbols by adding 'offset' to their addresses. */
 void relocate_data_symbols(SymbolTable *table, int offset);
+
+/* Relocate all symbols (code and data) by adding 'offset' to their addresses. */
+void relocate_all_symbols(SymbolTable *table, int offset);
 
 // Adds a new symbol to the table. Returns pointer to new symbol (or NULL if duplicate).
 Symbol* add_symbol(Symbol** table, const char* name, int address, SymbolType type);
