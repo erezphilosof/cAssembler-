@@ -6,9 +6,7 @@
 
 #define MAX_MACRO_NAME   32
 #define MAX_MACRO_PARAMS  8
-#define MAX_LINE_LEN    256
 #define MAX_MACROS      64
-#define MAX_LINES      1024
 
 /* One macro definition */
 typedef struct {

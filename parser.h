@@ -9,7 +9,6 @@
 #include "error.h"          /* get_error_count */
 #include "data_segment.h"  /* DataSegment */
 
-#define MAX_LINE_LEN     256
 #define MAX_LABEL_LEN     32
 #define MAX_OPCODE_LEN    10
 
@@ -42,11 +41,11 @@ typedef struct {
 
     /* directive-specific */
     DirectiveType dir_type;
-    char          directive_args[MAX_LINE_LEN];
+    char         *directive_args;    /* dynamically allocated */
 
     /* instruction-specific */
     char          opcode[MAX_OPCODE_LEN];
-    char          operands_raw[MAX_LINE_LEN];
+    char         *operands_raw;      /* dynamically allocated */
 } ParsedLine;
 
 /* Public API */

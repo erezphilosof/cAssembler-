@@ -44,20 +44,20 @@ static MacroDef *find_macro(MacroTable *mt, const char *name) {
 /* Scan once for “MACRO name p1,p2… “ until “ENDM” */
 bool scan_macros(const char *lines[], int line_count, MacroTable *mt) {
     for (int i = 0; i < line_count; i++) {
-        char buf[MAX_LINE_LEN];
-        strncpy(buf, lines[i], MAX_LINE_LEN-1);
-        buf[MAX_LINE_LEN-1] = '\0';
+        char *buf = strdup(lines[i]);
+        if (!buf) error_exit("Memory allocation failed");
         trim_string(buf);
         if (strncasecmp(buf, "MACRO", 5)==0 && isspace((unsigned char)buf[5])) {
             if (mt->count >= MAX_MACROS) {
                 print_error("Too many macros");
+                free(buf);
                 return false;
             }
             /* parse header: MACRO name param,param… */
             char *p = buf + 5;
             trim_string(p);
             char *tok = strtok(p, " \t");
-            if (!tok) { print_error("Invalid MACRO header"); return false; }
+            if (!tok) { print_error("Invalid MACRO header"); free(buf); return false; }
             MacroDef *md = &mt->macros[mt->count++];
             strncpy(md->name, tok, MAX_MACRO_NAME-1);
             md->body_len = 0;
@@ -79,11 +79,11 @@ bool scan_macros(const char *lines[], int line_count, MacroTable *mt) {
             /* collect body until ENDM */
             int j = i+1;
             for (; j < line_count; j++) {
-                char tmp[MAX_LINE_LEN];
-                strncpy(tmp, lines[j], MAX_LINE_LEN-1);
-                tmp[MAX_LINE_LEN-1] = '\0';
+                char *tmp = strdup(lines[j]);
+                if (!tmp) error_exit("Memory allocation failed");
                 trim_string(tmp);
                 if (strcasecmp(tmp, "ENDM")==0) {
+                    free(tmp);
                     break;
                 }
                 if (md->body_len >= md->body_cap) {
@@ -92,16 +92,17 @@ bool scan_macros(const char *lines[], int line_count, MacroTable *mt) {
                     if (!tmp_arr) error_exit("Memory allocation failed");
                     md->body = tmp_arr;
                 }
-                md->body[md->body_len] = strdup(tmp);
-                if (!md->body[md->body_len]) error_exit("Memory allocation failed");
+                md->body[md->body_len] = tmp;
                 md->body_len++;
             }
             if (j>=line_count) {
                 print_error("Missing ENDM for MACRO");
+                free(buf);
                 return false;
             }
             i = j;  /* continue after ENDM */
         }
+        free(buf);
     }
     return true;
 }
@@ -114,9 +115,8 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
     int oc = 0;
 
     for (int i = 0; i < in_count; i++) {
-        char buf[MAX_LINE_LEN];
-        strncpy(buf, lines[i], MAX_LINE_LEN-1);
-        buf[MAX_LINE_LEN-1] = '\0';
+        char *buf = strdup(lines[i]);
+        if (!buf) error_exit("Memory allocation failed");
         trim_string(buf);
         if (buf[0]=='\0') {
             if ((size_t)oc >= cap) {
@@ -126,6 +126,7 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
                 out = tmp;
             }
             out[oc++] = strdup(buf);
+            free(buf);
             continue;
         }
         /* check first token = macro name? */
@@ -174,6 +175,7 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
                 out[oc++] = tmp;
             }
         }
+        free(buf);
     }
 
     *out_count = oc;
