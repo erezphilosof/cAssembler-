@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <errno.h>
 
 #include "instructions.h"
 
@@ -46,7 +47,17 @@ static int parse_operand(const char *op,
     if (op[0] == '#') {
         *mode_out = AM_IMMEDIATE;
         *reg_out = 0;
-        *extra_out = (uint16_t)atoi(op + 1);
+
+        errno = 0;
+        char *endptr;
+        long val = strtol(op + 1, &endptr, 10);
+        if (errno != 0 || *endptr != '\0' || endptr == op + 1 ||
+            val < -32768 || val > 32767) {
+            print_error("Invalid number: %s", op + 1);
+            *extra_out = 0;
+        } else {
+            *extra_out = (uint16_t)val;
+        }
         return 1; /* needs extra word */
     }
     if (is_register(op)) {

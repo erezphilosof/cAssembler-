@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <errno.h>
 
 #include "parser.h"
 #include "symbol_table.h"
@@ -100,7 +101,15 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSe
                 char tokens[64][80];
                 int n = split_string(pl.directive_args, ',', tokens, 64);
                 for (int i = 0; i < n; i++) {
-                    append_data_word(data_seg, (uint16_t)atoi(tokens[i]));
+                    errno = 0;
+                    char *endptr;
+                    long val = strtol(tokens[i], &endptr, 10);
+                    if (errno != 0 || *endptr != '\0' || endptr == tokens[i] ||
+                        val < -32768 || val > 32767) {
+                        print_error("Invalid number: %s", tokens[i]);
+                        val = 0;
+                    }
+                    append_data_word(data_seg, (uint16_t)val);
                 }
                 DC += n;
                 break;
@@ -130,13 +139,39 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSe
                     print_error("Invalid .mat directive");
                     break;
                 }
-                int rows = atoi(tokens[0]);
-                int cols = atoi(tokens[1]);
-                int expected = rows * cols;
+
+                errno = 0;
+                char *endptr;
+                long rows = strtol(tokens[0], &endptr, 10);
+                if (errno != 0 || *endptr != '\0' || endptr == tokens[0] ||
+                    rows < -32768 || rows > 32767) {
+                    print_error("Invalid number: %s", tokens[0]);
+                    rows = 0;
+                }
+
+                errno = 0;
+                endptr = NULL;
+                long cols = strtol(tokens[1], &endptr, 10);
+                if (errno != 0 || *endptr != '\0' || endptr == tokens[1] ||
+                    cols < -32768 || cols > 32767) {
+                    print_error("Invalid number: %s", tokens[1]);
+                    cols = 0;
+                }
+
+                int expected = (int)(rows * cols);
                 for (int i = 0; i < expected; i++) {
-                    uint16_t val = 0;
-                    if (i + 2 < n) val = (uint16_t)atoi(tokens[i + 2]);
-                    append_data_word(data_seg, val);
+                    long val = 0;
+                    if (i + 2 < n) {
+                        errno = 0;
+                        endptr = NULL;
+                        val = strtol(tokens[i + 2], &endptr, 10);
+                        if (errno != 0 || *endptr != '\0' || endptr == tokens[i + 2] ||
+                            val < -32768 || val > 32767) {
+                            print_error("Invalid number: %s", tokens[i + 2]);
+                            val = 0;
+                        }
+                    }
+                    append_data_word(data_seg, (uint16_t)val);
                 }
                 DC += expected;
                 break;
