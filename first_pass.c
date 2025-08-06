@@ -208,6 +208,9 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSe
     /* relocate all data symbols by IC */
     relocate_data_symbols(symtab, IC);
 
+    /* apply base address to all symbols */
+    relocate_all_symbols(symtab, BASE_ADDRESS);
+
     if (IC_out) *IC_out = IC;
     if (DC_out) *DC_out = DC;
     return (get_error_count() == 0);

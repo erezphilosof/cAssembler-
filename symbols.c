@@ -64,3 +64,13 @@ void relocate_data_symbols(SymbolTable *table, int offset) {
     }
 }
 
+/* Relocate all symbols (code and data) by adding 'offset'. */
+void relocate_all_symbols(SymbolTable *table, int offset) {
+    if (!table) return;
+    Symbol *curr = table->next;
+    while (curr) {
+        curr->address += offset;
+        curr = curr->next;
+    }
+}
+

@@ -158,12 +158,14 @@ int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3
         if (needs) {
             if (mode == AM_MATRIX) {
                 if (sym && sym->type == SYM_EXTERNAL)
-                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                    add_external_use(&cpu->ext_uses, sym->name,
+                                     cpu->PC + count + BASE_ADDRESS);
                 out_words[count++] = sym ? sym->address : 0;
                 out_words[count++] = extra;
             } else {
                 if (sym && sym->type == SYM_EXTERNAL)
-                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                    add_external_use(&cpu->ext_uses, sym->name,
+                                     cpu->PC + count + BASE_ADDRESS);
                 out_words[count++] = extra;
             }
         }
@@ -176,12 +178,14 @@ int encode_instruction(const ParsedLine *pl, CPUState *cpu, uint16_t out_words[3
         if (needs) {
             if (mode == AM_MATRIX) {
                 if (sym && sym->type == SYM_EXTERNAL)
-                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                    add_external_use(&cpu->ext_uses, sym->name,
+                                     cpu->PC + count + BASE_ADDRESS);
                 out_words[count++] = sym ? sym->address : 0;
                 out_words[count++] = extra;
             } else {
                 if (sym && sym->type == SYM_EXTERNAL)
-                    add_external_use(&cpu->ext_uses, sym->name, cpu->PC + count);
+                    add_external_use(&cpu->ext_uses, sym->name,
+                                     cpu->PC + count + BASE_ADDRESS);
                 out_words[count++] = extra;
             }
         }
