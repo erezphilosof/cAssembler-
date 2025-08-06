@@ -9,6 +9,8 @@
 #include "utils.h"   /* trim_string, split_string */
 #include "error.h"   /* print_error */
 
+#define INITIAL_BODY_CAP 8
+
 /* Initialize macro table */
 void init_macro_table(MacroTable *mt) {
     mt->count = 0;
@@ -22,7 +24,10 @@ void free_macro_table(MacroTable *mt) {
             free(md->body[j]);
             md->body[j] = NULL;
         }
+        free(md->body);
+        md->body = NULL;
         md->body_len = 0;
+        md->body_cap = 0;
         md->param_count = 0;
     }
     mt->count = 0;
@@ -56,6 +61,9 @@ bool scan_macros(const char *lines[], int line_count, MacroTable *mt) {
             MacroDef *md = &mt->macros[mt->count++];
             strncpy(md->name, tok, MAX_MACRO_NAME-1);
             md->body_len = 0;
+            md->body_cap = INITIAL_BODY_CAP;
+            md->body = malloc(sizeof(char*) * md->body_cap);
+            if (!md->body) error_exit("Memory allocation failed");
 
             /* parse params if any */
             char *plist = strtok(NULL, "");
@@ -78,7 +86,15 @@ bool scan_macros(const char *lines[], int line_count, MacroTable *mt) {
                 if (strcasecmp(tmp, "ENDM")==0) {
                     break;
                 }
-                md->body[md->body_len++] = strdup(tmp);
+                if (md->body_len >= md->body_cap) {
+                    md->body_cap *= 2;
+                    char **tmp_arr = realloc(md->body, sizeof(char*) * md->body_cap);
+                    if (!tmp_arr) error_exit("Memory allocation failed");
+                    md->body = tmp_arr;
+                }
+                md->body[md->body_len] = strdup(tmp);
+                if (!md->body[md->body_len]) error_exit("Memory allocation failed");
+                md->body_len++;
             }
             if (j>=line_count) {
                 print_error("Missing ENDM for MACRO");

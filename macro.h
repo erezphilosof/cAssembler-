@@ -15,8 +15,9 @@ typedef struct {
     char        name[MAX_MACRO_NAME];
     int         param_count;
     char        params[MAX_MACRO_PARAMS][MAX_MACRO_NAME];
-    char       *body[MAX_LINES];
-    int         body_len;
+    char      **body;        /* dynamically sized array of body lines */
+    int         body_len;    /* number of used entries in body */
+    int         body_cap;    /* allocated capacity of body */
 } MacroDef;
 
 /* A table of all macros in this file */
