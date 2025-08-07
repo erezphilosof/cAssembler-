@@ -1,5 +1,6 @@
 // symbol_table.c
 #include "symbol_table.h"
+#include "error.h"  /* print_error */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +41,10 @@ Symbol* lookup_symbol(SymbolTable* table, const char* name) {
 bool update_symbol_type(Symbol* table, const char* name, SymbolType new_type) {
     Symbol* sym = find_symbol(table, name);
     if (!sym) return false;
+    if (sym->type == SYM_EXTERNAL && new_type == SYM_ENTRY) {
+        print_error("Cannot declare external symbol as entry: %s", name);
+        return false;
+    }
     sym->type = new_type;
     return true;
 }
