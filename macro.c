@@ -147,32 +147,44 @@ char **expand_macros(const char *lines[], int in_count, int *out_count, MacroTab
             int ac=0;
             if (aplist) {
                 char *p = strtok(aplist, ",");
-                while (p && ac<md->param_count) {
+                while (p && ac<MAX_MACRO_PARAMS) {
                     trim_string(p);
                     args[ac++] = p;
                     p = strtok(NULL, ",");
                 }
             }
-            /* for each body line, substitute %param% */
-            for (int b=0; b<md->body_len; b++) {
-                char *tmp = strdup(md->body[b]);
-                if (!tmp) error_exit("Memory allocation failed");
-                for (int pi=0; pi<md->param_count; pi++) {
-                    char pattern[64], repl[64];
-                    snprintf(pattern, sizeof(pattern), "%%%s%%", md->params[pi]);
-                    snprintf(repl, sizeof(repl), "%s", (pi<ac?args[pi]:""));
-                    char *repl_tmp = replace_substring(tmp, pattern, repl);
-                    free(tmp);
-                    if (!repl_tmp) error_exit("Memory allocation failed");
-                    tmp = repl_tmp;
-                }
+            /* validate argument count */
+            if (ac != md->param_count) {
+                print_error("Macro %s expects %d parameters but got %d", md->name, md->param_count, ac);
                 if ((size_t)oc >= cap) {
                     cap *= 2;
                     char **tmp_arr = realloc(out, sizeof(char*) * cap);
                     if (!tmp_arr) error_exit("Memory allocation failed");
                     out = tmp_arr;
                 }
-                out[oc++] = tmp;
+                out[oc++] = strdup(lines[i]);
+            } else {
+                /* for each body line, substitute %param% */
+                for (int b=0; b<md->body_len; b++) {
+                    char *tmp = strdup(md->body[b]);
+                    if (!tmp) error_exit("Memory allocation failed");
+                    for (int pi=0; pi<md->param_count; pi++) {
+                        char pattern[64], repl[64];
+                        snprintf(pattern, sizeof(pattern), "%%%s%%", md->params[pi]);
+                        snprintf(repl, sizeof(repl), "%s", (pi<ac?args[pi]:""));
+                        char *repl_tmp = replace_substring(tmp, pattern, repl);
+                        free(tmp);
+                        if (!repl_tmp) error_exit("Memory allocation failed");
+                        tmp = repl_tmp;
+                    }
+                    if ((size_t)oc >= cap) {
+                        cap *= 2;
+                        char **tmp_arr = realloc(out, sizeof(char*) * cap);
+                        if (!tmp_arr) error_exit("Memory allocation failed");
+                        out = tmp_arr;
+                    }
+                    out[oc++] = tmp;
+                }
             }
         }
         free(buf);
