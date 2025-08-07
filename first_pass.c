@@ -80,6 +80,8 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSe
         ++ln;
         ParsedLine pl;
         if (!parse_line(line, &pl, ln)) {
+            free(pl.directive_args);
+            free(pl.operands_raw);
             free(line);
             line = NULL;
             continue; /* error already logged */
@@ -185,6 +187,8 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSe
             default:
                 print_error("Unsupported directive");
             }
+            free(pl.directive_args);
+            free(pl.operands_raw);
             free(line);
             line = NULL;
             continue;
@@ -193,12 +197,16 @@ bool first_pass(FILE *src, SymbolTable *symtab, int *IC_out, int *DC_out, DataSe
         /* handle instructions */
         if (pl.type == STMT_INSTRUCTION) {
             IC += count_instruction_words(&pl);
+            free(pl.directive_args);
+            free(pl.operands_raw);
             free(line);
             line = NULL;
             continue;
         }
 
         /* label-only or empty/comment: do nothing */
+        free(pl.directive_args);
+        free(pl.operands_raw);
         free(line);
         line = NULL;
     }

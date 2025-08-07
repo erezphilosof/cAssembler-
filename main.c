@@ -142,7 +142,13 @@ cleanup:
         free(flat);
     }
     if (raw) { for (int i = 0; i < raw_n; i++) free(raw[i]); free(raw); }
-    free(plarr);
+    if (plarr) {
+        for (int i = 0; i < flat_n; i++) {
+            free(plarr[i].directive_args);
+            free(plarr[i].operands_raw);
+        }
+        free(plarr);
+    }
     return ok;
 }
 
