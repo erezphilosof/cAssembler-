@@ -64,7 +64,10 @@ bool parse_line(const char *src, ParsedLine *out, int line_no) {
         strncpy(out->label, p, len);
         out->label[len] = '\0';
         if (!is_valid_label(out->label)) {
-            print_error("Invalid label name");
+            if (is_reserved_word(out->label))
+                print_error("Label cannot be a reserved word");
+            else
+                print_error("Invalid label name");
             free(buf);
             return false;
         }

@@ -9,6 +9,13 @@ make
 
 This compiles all `.c` files into the `assembler` executable. Run `make clean` to remove object files and the binary.
 
+## Labels and Reserved Words
+
+Label names must begin with a letter and may contain letters, digits, or the
+underscore character.  In addition, label names cannot use any reserved terms
+such as opcode mnemonics (e.g. `MOV`), assembler directives (e.g. `.data`), or
+register identifiers (`r0`-`r7`).
+
 ## Opcode Table
 
 | Mnemonic | Opcode |

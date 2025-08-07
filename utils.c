@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <strings.h>
 #include <stdint.h>
 
 // Removes whitespace from the beginning and end of the string
@@ -73,6 +74,42 @@ void to_upper_case(char* str) {
     }
 }
 
+// Returns true if the string matches an opcode mnemonic, directive, or register
+bool is_reserved_word(const char *s) {
+    if (!s) return false;
+
+    static const char *opcodes[] = {
+        "MOV", "CMP", "ADD", "SUB", "LEA",
+        "CLR", "NOT", "INC", "DEC", "JMP",
+        "BNE", "JSR", "RED", "PRN", "RTS", "STOP",
+        NULL
+    };
+
+    static const char *directives[] = {
+        "DATA", "STRING", "MAT", "ENTRY", "EXTERN",
+        NULL
+    };
+
+    static const char *registers[] = {
+        "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7",
+        NULL
+    };
+
+    for (int i = 0; opcodes[i]; ++i)
+        if (strcasecmp(s, opcodes[i]) == 0)
+            return true;
+
+    for (int i = 0; directives[i]; ++i)
+        if (strcasecmp(s, directives[i]) == 0)
+            return true;
+
+    for (int i = 0; registers[i]; ++i)
+        if (strcasecmp(s, registers[i]) == 0)
+            return true;
+
+    return false;
+}
+
 // Returns true if the given string is a valid label name
 bool is_valid_label(const char* str) {
     if (!str || !isalpha((unsigned char)str[0]))
@@ -83,6 +120,8 @@ bool is_valid_label(const char* str) {
             return false;
         i++;
     }
+    if (is_reserved_word(str))
+        return false;
     return true;
 }
 

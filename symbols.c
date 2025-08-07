@@ -40,7 +40,10 @@ bool add_label_external(SymbolTable *table, const char *name) {
     buf[sizeof(buf)-1] = '\0';
     trim_string(buf);
     if (!is_valid_label(buf)) {
-        print_error("Invalid label name");
+        if (is_reserved_word(buf))
+            print_error("Label cannot be a reserved word");
+        else
+            print_error("Invalid label name");
         return false;
     }
     Symbol *sym = add_symbol(&table->next, buf, 0, SYM_EXTERNAL);
