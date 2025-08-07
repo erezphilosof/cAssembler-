@@ -21,6 +21,9 @@ int split_string(const char* str, char delimiter, char tokens[][80], int max_tok
 // Converts a string to uppercase (in place)
 void to_upper_case(char* str);
 
+// Returns true if the string is an opcode, directive, or register name
+bool is_reserved_word(const char *s);
+
 // Returns true if the given string is a valid label name (starts with a letter, contains only alphanumeric or _)
 bool is_valid_label(const char* str);
 
