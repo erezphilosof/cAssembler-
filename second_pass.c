@@ -12,7 +12,7 @@ bool second_pass(ParsedLine *lines, int line_count, CPUState *cpu) {
         /* Handle .entry directives: mark symbol as entry */
         if (pl->type == STMT_DIRECTIVE && pl->dir_type == DIR_ENTRY) {
             if (!update_symbol_type(cpu->symtab, pl->directive_args, SYM_ENTRY)) {
-                print_error("Undefined entry label: %s", pl->directive_args);
+                print_error("Invalid .entry for label: %s", pl->directive_args);
             }
             continue; /* no machine code emitted */
         }
