@@ -1,5 +1,9 @@
 # cAssembler
 
+## תיאור בעברית
+האסמבלר cAssembler מבצע שני מעברים על קוד אסמבלי, מרחיב מאקרו,
+בודק ומעדכן טבלת סמלים, ולבסוף יוצר קבצי .ob, .ent ו-.ext בהתאם לצורך.
+
 To build the assembler on Ubuntu:
 
 ```sh
